@@ -43,12 +43,14 @@ new class extends Component
     public function addToCart()
     {
         if ($this->product->stock <= 0) {
+            $this->dispatch('swal', title: 'Out of Stock!', text: 'Sorry, this product is currently out of stock.', icon: 'error');
             return;
         }
         
         CartService::add($this->product->id, $this->quantity);
         $this->dispatch('cart-updated');
         $this->dispatch('toggle-cart-drawer');
+        $this->dispatch('swal', title: 'Added to Cart!', text: "'{$this->product->name}' has been added to your shopping cart.", icon: 'success');
     }
 
     public function submitReview()
@@ -62,18 +64,30 @@ new class extends Component
             'comment' => 'required|string|min:5',
         ]);
 
-        Review::create([
-            'user_id' => auth()->id(),
-            'product_id' => $this->product->id,
-            'rating' => $this->rating,
-            'comment' => $this->comment,
-        ]);
+        Review::updateOrCreate(
+            [
+                'user_id' => auth()->id(),
+                'product_id' => $this->product->id,
+            ],
+            [
+                'rating' => $this->rating,
+                'comment' => $this->comment,
+            ]
+        );
 
         $this->comment = '';
         $this->rating = 5;
-        $this->product->load('reviews.user');
+        $this->product->load([
+            'brand',
+            'category',
+            'reviews.user',
+        ]);
         
-        session()->flash('review_success', 'Thank you for your review!');
+        $this->dispatch('swal', title: 'Review Submitted!', text: 'Thank you for your valuable feedback!', icon: 'success');
+    }
+    public function getAverageRatingProperty()
+    {
+        return round($this->product->reviews()->avg('rating'), 1);
     }
 };
 ?>
@@ -90,17 +104,21 @@ new class extends Component
     <!-- Product Intro -->
     <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
         <!-- Gallery -->
-        <div class="space-y-4">
+        <div class="space-y-4" x-data="{ activeImage: '{{ $product->images[0] ?? '' }}' }">
             <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <img src="{{ $product->images[0] }}" alt="{{ $product->name }}" class="h-full w-full object-cover">
+                <img :src="activeImage" alt="{{ $product->name }}" class="h-full w-full object-cover transition-all duration-300">
             </div>
             
             <!-- Sub-images thumbnails if any -->
             @if(count($product->images) > 1)
-                <div class="grid grid-cols-4 gap-4">
+                <div class="grid grid-cols-5 gap-3">
                     @foreach($product->images as $img)
-                        <div class="aspect-square bg-white border border-slate-200 rounded-xl overflow-hidden cursor-pointer hover:border-indigo-600 transition">
-                            <img src="{{ $img }}" class="h-full w-full object-cover">
+                        <div 
+                            @click="activeImage = '{{ $img }}'"
+                            :class="activeImage === '{{ $img }}' ? 'border-indigo-600 ring-2 ring-indigo-500/20' : 'border-slate-200'"
+                            class="aspect-square bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-600 transition duration-150"
+                        >
+                            <img src="{{ $img }}" alt="Product Image Thumbnail" class="h-full w-full object-cover">
                         </div>
                     @endforeach
                 </div>
@@ -110,19 +128,28 @@ new class extends Component
         <!-- Purchase Panel -->
         <div class="flex flex-col justify-between py-2">
             <div>
-                <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-600">{{ $product->brand->name }}</span>
+                {{-- <span class="text-xs font-extrabold uppercase tracking-wider text-indigo-600">{{ $product->brand->name }}</span> --}}
                 <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900 mt-1 mb-3">{{ $product->name }}</h1>
                 
                 <!-- Ratings display -->
-                <div class="flex items-center gap-2 mb-6">
-                    <div class="flex text-amber-400">
-                        @for($i = 1; $i <= 5; $i++)
-                            <svg class="h-4 w-4 fill-current" viewBox="0 0 20 20">
-                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                            </svg>
-                        @endfor
-                    </div>
-                    <span class="text-xs text-slate-500 font-semibold">({{ $product->reviews->count() }} customer review)</span>
+                <div class="flex items-center gap-1">
+                    @for($i = 1; $i <= 5; $i++)
+                        <svg
+                            class="h-5 w-5 {{ $i <= round($this->averageRating) ? 'text-amber-400' : 'text-slate-300' }}"
+                            fill="currentColor"
+                            viewBox="0 0 20 20">
+
+                            <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z"/>
+                        </svg>
+                    @endfor
+
+                    <span class="ml-2 text-sm font-semibold text-slate-800">
+                        {{ number_format($this->averageRating, 1) }}
+                    </span>
+
+                    <span class="text-sm text-slate-500">
+                        ({{ $product->reviews->count() }} Reviews)
+                    </span>
                 </div>
 
                 <!-- Pricing -->
@@ -136,47 +163,134 @@ new class extends Component
                 </div>
 
                 <p class="text-slate-600 text-sm leading-relaxed mb-6">{{ $product->short_description }}</p>
+                
+                <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
 
-                <!-- Stock indicators -->
-                <div class="mb-6">
-                    @if($product->stock > 0)
-                        <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-xs font-semibold text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
-                            In Stock ({{ $product->stock }} items)
-                        </span>
-                    @else
-                        <span class="inline-flex items-center rounded-full bg-rose-50 px-2.5 py-0.5 text-xs font-semibold text-rose-700 ring-1 ring-inset ring-rose-600/10">
-                            Out of Stock
-                        </span>
-                    @endif
-                </div>
-            </div>
+                    <h3 class="mb-4 text-sm font-bold text-slate-900">
+                        Product Information
+                    </h3>
 
-            <!-- Cart Control -->
-            @if($product->stock > 0)
-                <div class="space-y-4 pt-6 border-t border-slate-200">
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center border border-slate-200 bg-slate-50 rounded-xl overflow-hidden h-12">
-                            <button wire:click="decrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
-                                -
-                            </button>
-                            <span class="px-2 font-bold text-slate-800 text-sm w-8 text-center">{{ $quantity }}</span>
-                            <button wire:click="incrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
-                                +
-                            </button>
+                    <div class="grid grid-cols-2 gap-5">
+
+                        <!-- Brand -->
+                        @isset($product->brand?->name)
+                            <div>
+                                <p class="text-xs uppercase tracking-wider text-slate-400">
+                                    Brand
+                                </p>
+
+                                <p class="mt-1 text-sm font-semibold text-slate-900">
+                                    {{ $product->brand?->name ?? 'N/A' }}
+                                </p>
+                            </div>
+                            
+                        @endisset
+
+                        <!-- Category -->
+                        @isset($product->category?->name)
+                            <div>
+                                <p class="text-xs uppercase tracking-wider text-slate-400">
+                                    Category
+                                </p>
+
+                                <p class="mt-1 text-sm font-semibold text-slate-900">
+                                    {{ $product->category?->name ?? 'N/A' }}
+                                </p>
+                            </div>
+                        @endisset
+
+                        <!-- SKU -->
+                        @isset($product->sku)
+                            <div>
+                                <p class="text-xs uppercase tracking-wider text-slate-400">
+                                    SKU
+                                </p>
+
+                                <p class="mt-1 text-sm font-semibold text-slate-900">
+                                    {{ $product->sku }}
+                                </p>
+                            </div>
+                        @endisset
+                        <!-- Stock -->
+                        <div>
+                            <p class="text-xs uppercase tracking-wider text-slate-400">
+                                Availability
+                            </p>
+
+                            @if($product->stock > 0)
+
+                                <div class="mt-1 flex items-center gap-2">
+
+                                    <span class="text-sm font-semibold text-emerald-600">
+                                        In Stock ({{ $product->stock }})
+                                    </span>
+
+                                </div>
+
+                            @else
+
+                                <div class="mt-1 flex items-center gap-2">
+
+                                    <span class="text-sm font-semibold text-red-600">
+                                        Out of Stock
+                                    </span>
+                                </div>
+                            @endif
                         </div>
-
-                        <button 
-                            wire:click="addToCart"
-                            class="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 h-12 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition flex items-center justify-center gap-2"
-                        >
-                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                            </svg>
-                            Add to Shopping Cart
-                        </button>
                     </div>
                 </div>
-            @endif
+                <div class="mt-6 grid grid-cols-2 gap-3">
+
+                    <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+                        <div class="rounded-lg bg-emerald-100 p-2">
+                            🚚
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-semibold">Free Delivery</p>
+                            <p class="text-xs text-slate-500">Fast Shipping</p>
+                        </div>
+                    </div>
+
+                    <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
+                        <div class="rounded-lg bg-indigo-100 p-2">
+                            🛡
+                        </div>
+
+                        <div>
+                            <p class="text-sm font-semibold">Secure Payment</p>
+                            <p class="text-xs text-slate-500">100% Safe Checkout</p>
+                        </div>
+                    </div>
+
+                </div>
+                <!-- Cart Control -->
+                @if($product->stock > 0)
+                    <div class="space-y-4 pt-6 border-t border-slate-200">
+                        <div class="flex items-center gap-4">
+                            <div class="flex items-center border border-slate-200 bg-slate-50 rounded-xl overflow-hidden h-12">
+                                <button wire:click="decrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
+                                    -
+                                </button>
+                                <span class="px-2 font-bold text-slate-800 text-sm w-8 text-center">{{ $quantity }}</span>
+                                <button wire:click="incrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
+                                    +
+                                </button>
+                            </div>
+
+                            <button 
+                                wire:click="addToCart"
+                                class="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 h-12 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition flex items-center justify-center gap-2"
+                            >
+                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                </svg>
+                                Add to Cart
+                            </button>
+                        </div>
+                    </div>
+                @endif
+            </div>
         </div>
     </div>
 
@@ -223,11 +337,7 @@ new class extends Component
             <div class="bg-white border border-slate-200 rounded-2xl p-6 sticky top-24 space-y-4 shadow-sm">
                 <h3 class="font-bold text-slate-900 border-b border-slate-200 pb-3">Share Your Experience</h3>
                 
-                @if (session()->has('review_success'))
-                    <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-semibold text-emerald-700">
-                        {{ session('review_success') }}
-                    </div>
-                @endif
+
 
                 @auth
                     <form wire:submit="submitReview" class="space-y-4">

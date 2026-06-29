@@ -10,7 +10,7 @@ new class extends Component
 {
     public array $cart = [];
     public float $subtotal = 0;
-    public float $shipping = 99.00;
+    public float $shipping = 0;
     public float $grandTotal = 0;
 
     // Shipping info
@@ -98,6 +98,14 @@ new class extends Component
         CartService::clear();
         $this->dispatch('cart-updated');
 
+        // Send Invoice Email to Customer
+        try {
+            $recipientEmail = $order->shipping_address['email'] ?? auth()->user()->email;
+            \Illuminate\Support\Facades\Mail::to($recipientEmail)->send(new \App\Mail\OrderInvoiceMail($order));
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Checkout email failed: ' . $e->getMessage());
+        }
+
         return redirect()->to('/order-success/' . $order->id);
     }
 };
@@ -114,56 +122,56 @@ new class extends Component
                 
                 @if(!auth()->check())
                     <div class="rounded-xl bg-indigo-50 border border-indigo-200 p-4 text-xs text-indigo-700">
-                        You must be <a href="/login?redirect=checkout" class="font-bold underline">signed in</a> to complete your purchase order.
+                        You must be <a href="{{ route('login', ['redirect' => 'checkout']) }}" class="font-bold underline">signed in</a> to complete your purchase order.
                     </div>
                 @endif
 
                 <form wire:submit="placeOrder" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div class="sm:col-span-2">
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Full Name</label>
-                        <input type="text" wire:model="name" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
+                        <label for="name" class="block text-xs font-semibold text-slate-500 mb-1.5">Full Name</label>
+                        <input id="name" type="text" wire:model="name" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
                         @error('name') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Email Address</label>
-                        <input type="email" wire:model="email" class="w-full bg-slate-100 border border-slate-250 rounded-xl py-2 px-3 text-sm text-slate-500" disabled>
+                        <label for="email" class="block text-xs font-semibold text-slate-500 mb-1.5">Email Address</label>
+                        <input id="email" type="email" wire:model="email" class="w-full bg-slate-100 border border-slate-250 rounded-xl py-2 px-3 text-sm text-slate-500" disabled>
                         @error('email') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Phone Number</label>
-                        <input type="text" wire:model="phone" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
+                        <label for="phone" class="block text-xs font-semibold text-slate-500 mb-1.5">Phone Number</label>
+                        <input id="phone" type="text" wire:model="phone" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
                         @error('phone') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Street Address</label>
-                        <input type="text" wire:model="street" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
+                        <label for="street" class="block text-xs font-semibold text-slate-500 mb-1.5">Street Address</label>
+                        <input id="street" type="text" wire:model="street" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
                         @error('street') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">City</label>
-                        <input type="text" wire:model="city" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
+                        <label for="city" class="block text-xs font-semibold text-slate-500 mb-1.5">City</label>
+                        <input id="city" type="text" wire:model="city" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
                         @error('city') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">State</label>
-                        <input type="text" wire:model="state" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
+                        <label for="state" class="block text-xs font-semibold text-slate-500 mb-1.5">State</label>
+                        <input id="state" type="text" wire:model="state" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
                         @error('state') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Zip / Postal Code</label>
-                        <input type="text" wire:model="zip" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
+                        <label for="zip" class="block text-xs font-semibold text-slate-500 mb-1.5">Zip / Postal Code</label>
+                        <input id="zip" type="text" wire:model="zip" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}>
                         @error('zip') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="sm:col-span-2">
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Order Notes (Optional)</label>
-                        <textarea wire:model="notes" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}></textarea>
+                        <label for="notes" class="block text-xs font-semibold text-slate-500 mb-1.5">Order Notes (Optional)</label>
+                        <textarea id="notes" wire:model="notes" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600" {{ !auth()->check() ? 'disabled' : '' }}></textarea>
                     </div>
 
                     <!-- Payment Options -->
@@ -210,7 +218,7 @@ new class extends Component
                         <div class="flex items-center justify-between py-3">
                             <div class="flex items-center gap-3">
                                 <div class="h-10 w-10 flex-shrink-0 rounded bg-slate-50 overflow-hidden border border-slate-200">
-                                    <img src="{{ $item['image'] }}" class="h-full w-full object-cover">
+                                    <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="h-full w-full object-cover">
                                 </div>
                                 <div>
                                     <h4 class="text-xs font-bold text-slate-800 line-clamp-1">{{ $item['name'] }}</h4>

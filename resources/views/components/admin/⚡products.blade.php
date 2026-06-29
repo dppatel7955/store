@@ -2,6 +2,7 @@
 
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
@@ -10,7 +11,7 @@ use Livewire\Attributes\Computed;
 
 new class extends Component
 {
-    use WithPagination;
+    use WithPagination, WithFileUploads;
 
     public $search = '';
     public $filterCategory = '';
@@ -25,7 +26,9 @@ new class extends Component
     public $price = '';
     public $sale_price = '';
     public $stock = 0;
-    public $imageUrls = '';
+    public array $imagesList = [];
+    public $imageFiles = [];
+    public string $newImageUrl = '';
     public $short_description = '';
     public $description = '';
     public $category_id = '';
@@ -94,7 +97,9 @@ new class extends Component
             $this->price = $product->price;
             $this->sale_price = $product->sale_price;
             $this->stock = $product->stock;
-            $this->imageUrls = is_array($product->images) ? implode(", ", $product->images) : '';
+            $this->imagesList = is_array($product->images) ? $product->images : [];
+            $this->imageFiles = [];
+            $this->newImageUrl = '';
             $this->short_description = $product->short_description;
             $this->description = $product->description;
             $this->category_id = $product->category_id;
@@ -117,13 +122,35 @@ new class extends Component
         $this->price = '';
         $this->sale_price = '';
         $this->stock = 10;
-        $this->imageUrls = 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop';
+        $this->imagesList = ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop'];
+        $this->imageFiles = [];
+        $this->newImageUrl = '';
         $this->short_description = '';
         $this->description = '';
         $this->category_id = $this->categoriesList->first()->id ?? '';
         $this->brand_id = $this->brandsList->first()->id ?? '';
         $this->is_active = true;
         $this->is_featured = false;
+    }
+
+    public function addImageUrl()
+    {
+        $this->validate([
+            'newImageUrl' => 'required|url'
+        ], [
+            'newImageUrl.url' => 'Please enter a valid image URL.'
+        ]);
+
+        $this->imagesList[] = trim($this->newImageUrl);
+        $this->newImageUrl = '';
+    }
+
+    public function removeImage($index)
+    {
+        if (isset($this->imagesList[$index])) {
+            unset($this->imagesList[$index]);
+            $this->imagesList = array_values($this->imagesList);
+        }
     }
 
     public function save()
@@ -135,27 +162,38 @@ new class extends Component
             'price' => 'required|numeric|min:0',
             'sale_price' => 'nullable|numeric|min:0|lt:price',
             'stock' => 'required|integer|min:0',
-            'imageUrls' => 'required',
+            'imagesList' => 'required_without:imageFiles|array',
+            'imageFiles.*' => 'image|max:2048',
             'short_description' => 'nullable|max:500',
             'description' => 'nullable|max:5000',
             'category_id' => 'required|exists:categories,id',
             'brand_id' => 'nullable|exists:brands,id',
             'is_active' => 'required|boolean',
             'is_featured' => 'required|boolean'
+        ], [
+            'imagesList.required_without' => 'Please upload an image or add at least one image URL.'
         ]);
 
-        $images = array_filter(array_map('trim', explode(',', $this->imageUrls)));
-
-        Product::updateOrCreate(
+        if ($this->imageFiles) {
+            foreach ($this->imageFiles as $file) {
+                $path = $file->store('products', 'public');
+                $this->imagesList[] = asset('storage/' . $path);
+            }
+        }
+        do{
+            $sku='SKU-'.strtoupper(Str::random(8));
+        }
+        while(Product::whereSku($sku)->exists());
+        Product::updateOrCreate( 
             ['id' => $this->productId],
             [
                 'name' => $this->name,
                 'slug' => $this->slug,
-                'sku' => $this->sku ?: ('SKU-' . strtoupper(Str::random(6))),
+                'sku' => $this->sku ?: $sku,
                 'price' => $this->price,
                 'sale_price' => $this->sale_price ?: null,
                 'stock' => $this->stock,
-                'images' => $images,
+                'images' => $this->imagesList,
                 'short_description' => $this->short_description,
                 'description' => $this->description,
                 'category_id' => $this->category_id,
@@ -165,7 +203,7 @@ new class extends Component
             ]
         );
 
-        session()->flash('success', $this->productId ? 'Product updated successfully.' : 'Product created successfully.');
+        $this->dispatch('swal', title: 'Success!', text: $this->productId ? 'Product updated successfully.' : 'Product created successfully.', icon: 'success');
         $this->isOpen = false;
         $this->resetFields();
     }
@@ -175,7 +213,7 @@ new class extends Component
         $product = Product::findOrFail($id);
         $product->is_active = !$product->is_active;
         $product->save();
-        session()->flash('success', 'Status updated successfully.');
+        $this->dispatch('swal', title: 'Success!', text: 'Product active status updated successfully.', icon: 'success');
     }
 
     public function toggleFeatured($id)
@@ -183,44 +221,39 @@ new class extends Component
         $product = Product::findOrFail($id);
         $product->is_featured = !$product->is_featured;
         $product->save();
-        session()->flash('success', 'Featured status updated successfully.');
+        $this->dispatch('swal', title: 'Success!', text: 'Product featured status updated successfully.', icon: 'success');
     }
 
     public function delete($id)
     {
         $product = Product::findOrFail($id);
         $product->delete();
-        session()->flash('success', 'Product deleted successfully.');
+        $this->dispatch('swal', title: 'Deleted!', text: 'Product deleted successfully.', icon: 'success');
     }
 };
 ?>
 
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold text-slate-900">Products</h1>
             <p class="text-xs text-slate-500 mt-1">Manage, add, and restock inventory products.</p>
         </div>
         <button 
             wire:click="openModal()" 
-            class="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition"
+            class="w-full sm:w-auto rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition text-center"
         >
             Add Product
         </button>
     </div>
 
-    <!-- Status Messages -->
-    @if (session()->has('success'))
-        <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-semibold text-emerald-700">
-            {{ session('success') }}
-        </div>
-    @endif
+
 
     <!-- Toolbars / Filters -->
     <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
         <!-- Search -->
-        <div class="flex-1 max-w-xs relative">
+        <div class="w-full sm:max-w-xs relative">
             <input 
                 type="text" 
                 wire:model.live.debounce.300ms="search" 
@@ -280,13 +313,13 @@ new class extends Component
                         <tr class="hover:bg-slate-50/50 transition duration-150">
                             <!-- Product Image & Name -->
                             <td class="p-4">
-                                <div class="flex items-center gap-3">
-                                    <img src="{{ is_array($product->images) ? ($product->images[0] ?? '') : '' }}" alt="{{ $product->name }}" class="h-10 w-10 object-cover rounded-lg border border-slate-200 flex-shrink-0">
+                                <a href="/shop/{{ $product->slug }}" target="_blank" class="flex items-center gap-3 group">
+                                    <img src="{{ is_array($product->images) ? ($product->images[0] ?? '') : '' }}" alt="{{ $product->name }}" class="h-10 w-10 object-cover rounded-lg border border-slate-200 flex-shrink-0 group-hover:border-indigo-500 transition">
                                     <div class="flex flex-col">
-                                        <span class="text-xs font-bold text-slate-800 leading-normal">{{ $product->name }}</span>
-                                        <span class="text-[10px] text-slate-450 font-mono">ID: {{ $product->id }}</span>
+                                        <span class="text-xs font-bold text-slate-800 leading-normal group-hover:text-indigo-600 transition">{{ $product->name }}</span>
+                                        <span class="text-[10px] text-slate-450 font-mono">ID: {{ $product->id }} (View Detail &nearr;)</span>
                                     </div>
-                                </div>
+                                </a>
                             </td>
                             <!-- SKU -->
                             <td class="p-4 text-xs text-slate-500 font-mono">{{ $product->sku ?? '-' }}</td>
@@ -474,29 +507,101 @@ new class extends Component
                         </select>
                         @error('brand_id') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
-                </div>
-
-                <!-- Image URLs -->
-                <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">Image URLs (comma-separated)</label>
-                    <textarea wire:model.live.debounce.500ms="imageUrls" rows="2" placeholder="https://image1.jpg, https://image2.jpg" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition"></textarea>
-                    @error('imageUrls') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                              <!-- Image Upload and URLs -->
+                <div class="space-y-4 border-t border-slate-150 pt-4">
+                    <h4 class="text-xs font-bold text-slate-800 uppercase tracking-wider">Product Gallery Images</h4>
                     
-                    @php
-                        $previewImages = array_filter(array_map('trim', explode(',', $imageUrls)));
-                    @endphp
-                    @if(!empty($previewImages))
-                        <div class="mt-3">
-                            <span class="text-[10px] text-slate-450 block mb-1.5">Images Preview ({{ count($previewImages) }} detected)</span>
-                            <div class="flex gap-2 overflow-x-auto pb-2">
-                                @foreach($previewImages as $img)
-                                    @if(filter_var($img, FILTER_VALIDATE_URL))
-                                        <img src="{{ $img }}" class="h-14 w-14 object-cover rounded-lg border border-slate-200 bg-slate-55 flex-shrink-0" onerror="this.src='https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop'">
-                                    @endif
+                    <!-- Active Images Grid -->
+                    <div>
+                        <span class="text-[10px] text-slate-455 block mb-1.5 font-semibold">Active Images ({{ count($imagesList) }})</span>
+                        @if(!empty($imagesList))
+                            <div class="grid grid-cols-3 sm:grid-cols-5 gap-3 p-3 bg-slate-50/50 border border-slate-200 rounded-2xl">
+                                @foreach($imagesList as $index => $img)
+                                    <div class="relative aspect-square rounded-xl overflow-hidden border border-slate-200 bg-white group shadow-sm flex-shrink-0">
+                                        <img src="{{ $img }}" class="h-full w-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop'">
+                                        <button 
+                                            type="button" 
+                                            wire:click="removeImage({{ $index }})" 
+                                            class="absolute inset-0 bg-slate-900/60 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity text-white rounded-xl"
+                                        >
+                                            <svg class="h-5 w-5 hover:scale-110 transition" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16" />
+                                            </svg>
+                                        </button>
+                                    </div>
                                 @endforeach
                             </div>
+                        @else
+                            <div class="border border-slate-200 border-dashed rounded-2xl p-6 text-center text-xs text-slate-400 italic">
+                                No active images. Please add at least one image.
+                            </div>
+                        @endif
+                        @error('imagesList') <span class="text-[10px] text-rose-600 font-semibold block mt-1">{{ $message }}</span> @enderror
+                    </div>
+
+                    <!-- Upload and Add URL Inputs -->
+                    <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- File Upload -->
+                        <div>
+                            <span class="text-[10px] text-slate-455 block mb-1.5 font-semibold">Upload Local Images</span>
+                            <div class="relative flex items-center justify-center w-full">
+                                <label class="flex flex-col items-center justify-center w-full h-24 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition">
+                                    <div class="flex flex-col items-center justify-center pt-3 pb-3">
+                                        <svg class="w-6 h-6 text-slate-450 mb-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                        </svg>
+                                        <p class="text-[10px] text-slate-500 font-bold">Select multiple image files</p>
+                                    </div>
+                                    <input type="file" wire:model="imageFiles" accept="image/*" multiple class="hidden" />
+                                </label>
+                            </div>
+                            @error('imageFiles') <span class="text-[10px] text-rose-600 font-semibold block mt-1">{{ $message }}</span> @enderror
+                            @error('imageFiles.*') <span class="text-[10px] text-rose-600 font-semibold block mt-1">{{ $message }}</span> @enderror
+                            
+                            <!-- Temporary Previews -->
+                            @if(!empty($imageFiles))
+                                <div class="space-y-1.5 mt-3">
+                                    <div class="flex items-center justify-between">
+                                        <span class="text-[9px] text-indigo-650 font-bold block">New Upload Previews ({{ count($imageFiles) }}):</span>
+                                        <button type="button" wire:click="$set('imageFiles', [])" class="text-[9px] text-slate-400 hover:text-slate-600 underline">Clear Previews</button>
+                                    </div>
+                                    <div class="flex gap-2 overflow-x-auto pb-1.5">
+                                        @foreach($imageFiles as $file)
+                                            <div class="relative h-12 w-12 rounded-lg overflow-hidden border border-indigo-200 flex-shrink-0 bg-slate-50 shadow-sm">
+                                                <img src="{{ $file->temporaryUrl() }}" class="h-full w-full object-cover" />
+                                            </div>
+                                        @endforeach
+                                    </div>
+                                </div>
+                            @endif
                         </div>
-                    @endif
+
+                        <!-- Add Remote URL -->
+                        <div>
+                            <span class="text-[10px] text-slate-455 block mb-1.5 font-semibold">Or Add Image by URL</span>
+                            <div class="space-y-3">
+                                <div class="flex items-center gap-2">
+                                    <input 
+                                        type="text" 
+                                        wire:model="newImageUrl" 
+                                        placeholder="https://example.com/image.jpg" 
+                                        class="flex-1 bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition" 
+                                    />
+                                    <button 
+                                        type="button" 
+                                        wire:click="addImageUrl" 
+                                        class="rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 text-slate-700 py-2 px-4 text-xs font-bold transition shadow-sm"
+                                    >
+                                        Add
+                                    </button>
+                                </div>
+                                @error('newImageUrl') <span class="text-[10px] text-rose-600 font-semibold block">{{ $message }}</span> @enderror
+                                <p class="text-[9px] text-slate-400 leading-normal">
+                                    Paste a direct URL to an image file (e.g. Unsplash photos or raw images) and click "Add" to include it in the product gallery.
+                                </p>
+                            </div>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Short Description -->

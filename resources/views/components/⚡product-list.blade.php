@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Component;
+use Livewire\WithPagination;
 use App\Models\Product;
 use App\Models\Category;
 use App\Models\Brand;
@@ -9,6 +10,7 @@ use Livewire\Attributes\Computed;
 
 new class extends Component
 {
+    use WithPagination;
     // Filters
     public string $search = '';
     public array $selectedCategories = [];
@@ -20,8 +22,7 @@ new class extends Component
     public $categoriesList = [];
     public $brandsList = [];
     
-    // Infinite scroll pagination limit
-    public int $perPage = 12;
+
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -35,7 +36,7 @@ new class extends Component
         $this->categoriesList = Category::where('is_active', true)->get();
         $this->brandsList = Brand::where('is_active', true)->get();
 
-        if (request()->has('search')) {
+        if (request()->has('search') && !empty(request('search'))) {
             $this->search = request('search');
         }
         if (request()->has('category')) {
@@ -54,12 +55,7 @@ new class extends Component
 
     public function updating($property)
     {
-        $this->perPage = 12;
-    }
-
-    public function loadMore()
-    {
-        $this->perPage += 12;
+        $this->resetPage();
     }
 
     #[Computed]
@@ -95,7 +91,7 @@ new class extends Component
             $query->orderBy('is_featured', 'desc')->orderBy('name', 'asc');
         }
 
-        return $query->paginate($this->perPage);
+        return $query->paginate(12);
     }
 
     public function addToCart(int $productId)
@@ -113,7 +109,7 @@ new class extends Component
         $this->minPrice = 0;
         $this->maxPrice = 250000;
         $this->sortBy = 'default';
-        $this->perPage = 12;
+        $this->resetPage();
     }
 };
 ?>
@@ -125,8 +121,8 @@ new class extends Component
             <h1 class="text-3xl font-extrabold text-slate-900">Catalog Shop</h1>
             <p class="text-sm text-slate-500 mt-1">Discover, filter, and buy premium hardware products.</p>
         </div>
-        <div class="flex items-center gap-4 w-full md:w-auto">
-            <div class="relative flex-1 md:w-72">
+        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
+            <div class="relative w-full sm:w-72">
                 <input 
                     type="text" 
                     wire:model.live.debounce.300ms="search" 
@@ -142,7 +138,7 @@ new class extends Component
             
             <select 
                 wire:model.live="sortBy"
-                class="bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-600 transition shadow-sm"
+                class="w-full sm:w-auto bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-600 transition shadow-sm"
             >
                 <option value="default">Sort: Default</option>
                 <option value="price_asc">Price: Low to High</option>
@@ -155,8 +151,29 @@ new class extends Component
     <!-- Main Content Layout -->
     <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
         <!-- Sidebar Filters -->
-        <aside class="space-y-6 lg:col-span-1">
-            <div class="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 sticky top-24 shadow-sm">
+        <aside class="space-y-4 lg:col-span-1" x-data="{ mobileOpen: false }">
+            <!-- Mobile Filters Toggle -->
+            <button 
+                type="button"
+                @click="mobileOpen = !mobileOpen" 
+                class="lg:hidden w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
+            >
+                <span class="flex items-center gap-2">
+                    <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                    </svg>
+                    Filters & Categories
+                </span>
+                <svg class="h-5 w-5 text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': mobileOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+                </svg>
+            </button>
+
+            <!-- Filters Card (collapsible on mobile, static on desktop) -->
+            <div 
+                :class="mobileOpen ? 'block' : 'hidden lg:block'" 
+                class="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 sticky top-24 shadow-sm"
+            >
                 <div class="flex items-center justify-between border-b border-slate-100 pb-4">
                     <h3 class="font-bold text-slate-850">Filters</h3>
                     <button wire:click="resetFilters" class="text-xs text-indigo-650 hover:text-indigo-500 font-semibold transition">
@@ -229,20 +246,20 @@ new class extends Component
                     @foreach($this->products as $prod)
                         <div class="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-md transition duration-300 flex flex-col h-full">
                             <!-- Image -->
-                            <div class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100">
+                            <a href="/shop/{{ $prod->slug }}" class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100 block">
                                 <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                 @if($prod->sale_price)
                                     <span class="absolute top-3 left-3 bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full">
                                         Sale
                                     </span>
                                 @endif
-                            </div>
+                            </a>
                             <!-- Details -->
                             <div class="p-5 flex-1 flex flex-col justify-between">
                                 <div>
                                     <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name }}</span>
-                                    <h3 class="text-sm font-bold text-slate-800 mt-1 line-clamp-1">
-                                        {{ $prod->name }}
+                                    <h3 class="text-sm font-bold text-slate-800 mt-1 line-clamp-1 hover:text-indigo-600 transition">
+                                        <a href="/shop/{{ $prod->slug }}">{{ $prod->name }}</a>
                                     </h3>
                                     <p class="text-xs text-slate-500 mt-1 line-clamp-2">{{ $prod->short_description }}</p>
                                 </div>
@@ -271,18 +288,10 @@ new class extends Component
                     @endforeach
                 </div>
 
-                <!-- Infinite Scroll Sentinel -->
-                @if($this->products->hasMorePages())
-                    <div x-intersect="$wire.loadMore()" class="h-16 flex items-center justify-center pt-6 mt-4">
-                        <div class="text-sm text-slate-500 font-semibold flex items-center gap-2">
-                            <svg class="animate-spin h-5 w-5 text-indigo-600" fill="none" viewBox="0 0 24 24">
-                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                            </svg>
-                            <span>Loading more products...</span>
-                        </div>
-                    </div>
-                @endif
+                <!-- Pagination Links -->
+                <div class="mt-8 pt-6 border-t border-slate-200">
+                    {{ $this->products->links() }}
+                </div>
             @else
                 <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
                     <svg class="h-12 w-12 text-slate-405 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">

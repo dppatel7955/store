@@ -53,5 +53,12 @@ new class extends Component
                 Sign In
             </button>
         </form>
+
+        <div class="text-center border-t border-slate-100 pt-4">
+            <p class="text-xs text-slate-500 font-medium">
+                Don't have an account? 
+                <a href="{{ route('register') }}" class="font-bold text-indigo-600 hover:underline">Sign Up</a>
+            </p>
+        </div>
     </div>
 </div>

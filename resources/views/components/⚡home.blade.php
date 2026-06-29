@@ -12,6 +12,12 @@ new class extends Component
     public $brands = [];
     public $featuredProducts = [];
 
+    // Hero settings
+    public string $badge_text = 'Premium Hardware & Tech';
+    public string $banner_title = 'Unleash the Future of Digital Shopping';
+    public string $banner_subtitle = 'Explore handpicked flagship smartphones, laptops, smartwatches, and accessories with lightning-fast checkout.';
+    public string $banner_image = '';
+
     public function mount()
     {
         $this->categories = Category::where('is_active', true)->get();
@@ -20,6 +26,16 @@ new class extends Component
             ->where('is_featured', true)
             ->limit(4)
             ->get();
+
+        if (file_exists(storage_path('app/home_settings.json'))) {
+            $settings = json_decode(file_get_contents(storage_path('app/home_settings.json')), true);
+            if ($settings) {
+                $this->badge_text = $settings['badge_text'] ?? 'Premium Hardware & Tech';
+                $this->banner_title = $settings['banner_title'] ?? 'Unleash the Future of Digital Shopping';
+                $this->banner_subtitle = $settings['banner_subtitle'] ?? 'Explore handpicked flagship smartphones, laptops, smartwatches, and accessories with lightning-fast checkout.';
+                $this->banner_image = $settings['banner_image'] ?? '';
+            }
+        }
     }
 
     public function addToCart(int $productId)
@@ -33,31 +49,64 @@ new class extends Component
 
 <div class="space-y-16">
     <!-- Hero Banner -->
-    <section class="relative overflow-hidden bg-white border-b border-slate-200 py-24 sm:py-32 shadow-sm">
+    <section class="relative overflow-hidden bg-white border-b border-slate-200 py-16 sm:py-24 shadow-sm">
         <div class="absolute -top-40 -left-40 w-96 h-96 bg-indigo-500/5 rounded-full blur-3xl"></div>
         <div class="absolute -bottom-40 -right-40 w-96 h-96 bg-purple-500/5 rounded-full blur-3xl"></div>
         
-        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative text-center">
-            <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-650 ring-1 ring-inset ring-indigo-200/50 mb-6">
-                Premium Hardware & Tech
-            </span>
-            <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900 mb-6">
-                Unleash the Future of <br>
-                <span class="bg-gradient-to-r from-indigo-650 via-purple-650 to-pink-655 bg-clip-text text-transparent">
-                    Digital Shopping
-                </span>
-            </h1>
-            <p class="max-w-xl mx-auto text-lg text-slate-650 mb-10 leading-relaxed">
-                Explore handpicked flagship smartphones, laptops, smartwatches, and accessories with lightning-fast checkout.
-            </p>
-            <div class="flex justify-center gap-4">
-                <a href="/shop" class="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-650 px-6 py-3 text-sm font-bold text-white shadow-md hover:from-indigo-700 hover:to-purple-760 transition">
-                    Shop Catalog
-                </a>
-                <a href="#featured" class="rounded-xl bg-white border border-slate-250 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm">
-                    Featured Deals
-                </a>
-            </div>
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 relative">
+            @if($banner_image)
+                <!-- Split-Pane Hero Layout -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-12 items-center">
+                    <!-- Text Area -->
+                    <div class="lg:col-span-7 text-center lg:text-left space-y-6">
+                        <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-650 ring-1 ring-inset ring-indigo-200/50">
+                            {{ $badge_text }}
+                        </span>
+                        <h1 class="text-4xl sm:text-5xl lg:text-6xl font-extrabold tracking-tight text-slate-900 leading-tight">
+                            {!! nl2br(e($banner_title)) !!}
+                        </h1>
+                        <p class="text-base sm:text-lg text-slate-650 max-w-xl mx-auto lg:mx-0 leading-relaxed">
+                            {{ $banner_subtitle }}
+                        </p>
+                        <div class="flex justify-center lg:justify-start gap-4">
+                            <a href="/shop" class="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-650 px-6 py-3 text-sm font-bold text-white shadow-md hover:from-indigo-700 hover:to-purple-760 transition">
+                                Shop Catalog
+                            </a>
+                            <a href="#featured" class="rounded-xl bg-white border border-slate-250 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                                Featured Deals
+                            </a>
+                        </div>
+                    </div>
+
+                    <!-- Image Area -->
+                    <div class="lg:col-span-5 flex justify-center">
+                        <div class="relative w-full max-w-sm aspect-[4/3] rounded-3xl overflow-hidden shadow-2xl border-4 border-white/60 bg-white/30 backdrop-blur-sm group">
+                            <img src="{{ $banner_image }}" alt="Hero banner image" class="h-full w-full object-cover group-hover:scale-105 transition duration-700">
+                        </div>
+                    </div>
+                </div>
+            @else
+                <!-- Clean Centered Hero Layout (Fallback) -->
+                <div class="text-center space-y-6">
+                    <span class="inline-flex items-center rounded-full bg-indigo-50 px-3 py-1 text-xs font-bold text-indigo-650 ring-1 ring-inset ring-indigo-200/50">
+                        {{ $badge_text }}
+                    </span>
+                    <h1 class="text-4xl sm:text-6xl font-extrabold tracking-tight text-slate-900">
+                        {!! nl2br(e($banner_title)) !!}
+                    </h1>
+                    <p class="max-w-xl mx-auto text-base sm:text-lg text-slate-650 leading-relaxed">
+                        {{ $banner_subtitle }}
+                    </p>
+                    <div class="flex justify-center gap-4">
+                        <a href="/shop" class="rounded-xl bg-gradient-to-r from-indigo-600 to-purple-650 px-6 py-3 text-sm font-bold text-white shadow-md hover:from-indigo-700 hover:to-purple-760 transition">
+                            Shop Catalog
+                        </a>
+                        <a href="#featured" class="rounded-xl bg-white border border-slate-250 px-6 py-3 text-sm font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                            Featured Deals
+                        </a>
+                    </div>
+                </div>
+            @endif
         </div>
     </section>
 

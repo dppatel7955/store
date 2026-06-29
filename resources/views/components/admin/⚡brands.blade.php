@@ -2,6 +2,7 @@
 
 use Livewire\Component;
 use Livewire\WithPagination;
+use Livewire\WithFileUploads;
 use App\Models\Brand;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
@@ -9,6 +10,7 @@ use Livewire\Attributes\Computed;
 new class extends Component
 {
     use WithPagination;
+    use WithFileUploads;
 
     public $search = '';
     public $isOpen = false;
@@ -18,6 +20,7 @@ new class extends Component
     public $name = '';
     public $slug = '';
     public $logo = '';
+    public $logoFile = null;
     public $is_active = true;
 
     protected $queryString = [
@@ -51,6 +54,7 @@ new class extends Component
     public function openModal($id = null)
     {
         $this->resetErrorBag();
+        $this->logoFile = null;
 
         if ($id) {
             $brand = Brand::findOrFail($id);
@@ -71,18 +75,33 @@ new class extends Component
         $this->brandId = null;
         $this->name = '';
         $this->slug = '';
-        $this->logo = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=100&auto=format&fit=crop';
+        $this->logo = '';
+        $this->logoFile = null;
         $this->is_active = true;
     }
 
     public function save()
     {
-        $this->validate([
+        $rules = [
             'name' => 'required|min:2|max:255',
             'slug' => 'required|max:255|unique:brands,slug,' . ($this->brandId ?? 'NULL') . ',id',
-            'logo' => 'required|url',
+            'logoFile' => 'nullable|image|max:2048',
             'is_active' => 'required|boolean'
-        ]);
+        ];
+
+        if (!$this->brandId && !$this->logoFile) {
+            $rules['logoFile'] = 'required|image|max:2048';
+        }
+
+        $this->validate($rules);
+
+        if ($this->logoFile) {
+            $this->logo = '/storage/' . $this->logoFile->store('brands', 'public');
+        }
+
+        if (empty($this->logo)) {
+            $this->logo = 'https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=100&auto=format&fit=crop';
+        }
 
         Brand::updateOrCreate(
             ['id' => $this->brandId],
@@ -94,7 +113,7 @@ new class extends Component
             ]
         );
 
-        session()->flash('success', $this->brandId ? 'Brand updated successfully.' : 'Brand created successfully.');
+        $this->dispatch('swal', title: 'Success!', text: $this->brandId ? 'Brand updated successfully.' : 'Brand created successfully.', icon: 'success');
         $this->isOpen = false;
         $this->resetFields();
     }
@@ -104,7 +123,7 @@ new class extends Component
         $brand = Brand::findOrFail($id);
         $brand->is_active = !$brand->is_active;
         $brand->save();
-        session()->flash('success', 'Status updated successfully.');
+        $this->dispatch('swal', title: 'Success!', text: 'Brand status updated successfully.', icon: 'success');
     }
 
     public function delete($id)
@@ -112,46 +131,36 @@ new class extends Component
         $brand = Brand::findOrFail($id);
 
         if ($brand->products()->count() > 0) {
-            session()->flash('error', "Cannot delete brand '{$brand->name}' because it contains products.");
+            $this->dispatch('swal', title: 'Error!', text: "Cannot delete brand '{$brand->name}' because it contains products.", icon: 'error');
             return;
         }
 
         $brand->delete();
-        session()->flash('success', 'Brand deleted successfully.');
+        $this->dispatch('swal', title: 'Deleted!', text: 'Brand deleted successfully.', icon: 'success');
     }
 };
 ?>
 
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold text-slate-900">Brands</h1>
             <p class="text-xs text-slate-500 mt-1">Manage manufacturers and product brands.</p>
         </div>
         <button 
             wire:click="openModal()" 
-            class="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition"
+            class="w-full sm:w-auto rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition text-center"
         >
             Add Brand
         </button>
     </div>
 
-    <!-- Status Messages -->
-    @if (session()->has('success'))
-        <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-semibold text-emerald-700">
-            {{ session('success') }}
-        </div>
-    @endif
-    @if (session()->has('error'))
-        <div class="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs font-semibold text-rose-700">
-            {{ session('error') }}
-        </div>
-    @endif
+
 
     <!-- Toolbar -->
-    <div class="flex items-center justify-between gap-4">
-        <div class="flex-1 max-w-xs relative">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div class="w-full sm:max-w-xs relative">
             <input 
                 type="text" 
                 wire:model.live.debounce.300ms="search" 
@@ -302,23 +311,33 @@ new class extends Component
                     @error('slug') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                 </div>
 
-                <!-- Logo URL -->
+                <!-- Logo File Upload -->
                 <div>
-                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">Logo URL</label>
-                    <input 
-                        type="text" 
-                        wire:model.live="logo" 
-                        placeholder="https://logo.clearbit.com/apple.com" 
-                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-655 focus:ring-1 focus:ring-indigo-600 transition"
-                    />
-                    @error('logo') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
-                    
-                    @if($logo && !filter_var($logo, FILTER_VALIDATE_URL) === false)
-                        <div class="mt-2 text-center">
-                            <span class="text-[10px] text-slate-450 block mb-1">Logo Preview</span>
-                            <img src="{{ $logo }}" class="h-16 w-16 object-contain rounded-lg border border-slate-200 p-1 mx-auto bg-white" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=100&auto=format&fit=crop'">
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">Brand Logo</label>
+                    <div class="flex items-center gap-4">
+                        @if($logoFile)
+                            <div class="relative h-16 w-16 rounded-xl overflow-hidden border border-indigo-200 bg-slate-50 shadow-sm flex-shrink-0">
+                                <img src="{{ $logoFile->temporaryUrl() }}" class="h-full w-full object-cover">
+                            </div>
+                        @elseif($logo)
+                            <div class="relative h-16 w-16 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm flex-shrink-0">
+                                <img src="{{ $logo }}" class="h-full w-full object-cover" onerror="this.src='https://images.unsplash.com/photo-1618005182384-a83a8bd57fbe?q=80&w=100&auto=format&fit=crop'">
+                            </div>
+                        @endif
+                        <div class="flex-1">
+                            <label class="flex flex-col items-center justify-center w-full h-16 border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition">
+                                <div class="flex flex-col items-center justify-center pt-1.5 pb-1.5">
+                                    <svg class="w-5 h-5 text-slate-450 mb-0.5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12" />
+                                    </svg>
+                                    <p class="text-[9px] text-slate-500 font-bold">Select logo file</p>
+                                </div>
+                                <input type="file" wire:model="logoFile" accept="image/*" class="hidden" />
+                            </label>
                         </div>
-                    @endif
+                    </div>
+                    @error('logoFile') <span class="text-[10px] text-rose-600 font-semibold block mt-1">{{ $message }}</span> @enderror
+                    @error('logo') <span class="text-[10px] text-rose-600 font-semibold block mt-1">{{ $message }}</span> @enderror
                 </div>
 
                 <!-- Status Toggle -->

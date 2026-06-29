@@ -29,12 +29,24 @@ new class extends Component
         $this->order->save();
         session()->flash('success', 'Payment status updated successfully.');
     }
+
+    public function sendInvoiceEmail()
+    {
+        try {
+            $recipientEmail = $this->order->shipping_address['email'] ?? $this->order->user->email;
+            \Illuminate\Support\Facades\Mail::to($recipientEmail)->send(new \App\Mail\OrderInvoiceMail($this->order));
+            $this->dispatch('swal', title: 'Success!', text: 'Invoice email sent successfully to ' . $recipientEmail, icon: 'success');
+        } catch (\Exception $e) {
+            \Illuminate\Support\Facades\Log::error('Failed to send manually: ' . $e->getMessage());
+            $this->dispatch('swal', title: 'Error!', text: 'Failed to send email. Check SMTP settings. Error: ' . $e->getMessage(), icon: 'error');
+        }
+    }
 };
 ?>
 
 <div class="space-y-6">
     <!-- Breadcrumbs / Back button -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
             <a href="/admin/orders" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:shadow shadow-sm transition">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -46,7 +58,7 @@ new class extends Component
                 <p class="text-xs text-slate-500 mt-1">Invoice summary and shipping status for order #{{ $order->id }}.</p>
             </div>
         </div>
-        <div>
+        <div class="sm:text-right">
             <span class="text-xs text-slate-450 font-semibold">Placed on: {{ $order->created_at->format('M d, Y h:i A') }}</span>
         </div>
     </div>
@@ -208,6 +220,31 @@ new class extends Component
                         <span>Shipment Method:</span>
                         <span class="font-bold text-slate-700">{{ $order->shipping_method ?? 'Flat Rate' }}</span>
                     </div>
+                </div>
+
+                <!-- Management Actions -->
+                <div class="border-t border-slate-200 pt-4 space-y-2.5">
+                    <button 
+                        type="button" 
+                        wire:click="sendInvoiceEmail"
+                        class="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white shadow-sm transition"
+                    >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 19v-8.93a2 2 0 01.89-1.664l8-5.333a2 2 0 012.22 0l8 5.333A2 2 0 0121 10.07V19M3 19a2 2 0 002 2h14a2 2 0 002-2M3 19l6.75-4.5M21 19l-6.75-4.5M3 10l6.75 4.5M21 10l-6.75 4.5m0 0l-2.25-1.5a2 2 0 00-2.22 0l-2.25 1.5" />
+                        </svg>
+                        Send Invoice Email
+                    </button>
+
+                    <a 
+                        href="/admin/orders/{{ $order->id }}/invoice" 
+                        target="_blank"
+                        class="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition"
+                    >
+                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 17h2a2 2 0 002-2v-4a2 2 0 00-2-2H5a2 2 0 00-2 2v4a2 2 0 002 2h2m2 4h6a2 2 0 002-2v-4a2 2 0 00-2-2H9a2 2 0 00-2 2v4a2 2 0 002 2zm8-12V5a2 2 0 00-2-2H9a2 2 0 00-2-2v4" />
+                        </svg>
+                        Print Invoice
+                    </a>
                 </div>
             </div>
 

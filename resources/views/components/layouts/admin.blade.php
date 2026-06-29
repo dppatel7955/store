@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta name="csrf-token" content="{{ csrf_token() }}">
 
-    <title>{{ $title ?? 'Darshan Admin Panel' }}</title>
+    <title>{{ $title ?? 'SAFFRON STORE Admin Panel' }}</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,6 +21,9 @@
 
     <!-- Vite Assets -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
+    
+    <!-- SweetAlert2 -->
+    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
     
     @livewireStyles
 </head>
@@ -63,7 +66,7 @@
                     <div class="flex grow flex-col gap-y-5 overflow-y-auto px-6 pb-4 bg-white">
                         <div class="flex h-16 shrink-0 items-center">
                             <span class="text-2xl font-extrabold tracking-wider bg-gradient-to-r from-indigo-600 via-purple-650 to-pink-600 bg-clip-text text-transparent">
-                                DARSHAN
+                                SAFFRON STORE
                             </span>
                         </div>
                         <nav class="flex flex-1 flex-col">
@@ -93,9 +96,9 @@
             <div class="flex grow flex-col gap-y-5 overflow-y-auto bg-white border-r border-slate-200 px-6 pb-4 shadow-sm">
                 <div class="flex h-16 shrink-0 items-center justify-between">
                     <span class="text-2xl font-extrabold tracking-wider bg-gradient-to-r from-indigo-600 via-purple-650 to-pink-600 bg-clip-text text-transparent">
-                        DARSHAN
+                        SAFFRON STORE
                     </span>
-                    <a href="/" class="text-xs font-bold text-slate-550 hover:text-indigo-650 border border-slate-200 rounded-full px-2 py-0.5 transition">
+                    <a href="{{url('')}}" class="text-xs font-bold text-slate-550 hover:text-indigo-650 border border-slate-200 rounded-full px-2 py-0.5 transition">
                         Shop
                     </a>
                 </div>
@@ -141,9 +144,19 @@
                         <path stroke-linecap="round" stroke-linejoin="round" d="M3.75 6.75h16.5M3.75 12h16.5m-16.5 5.25h16.5" />
                     </svg>
                 </button>
-                <div class="flex-1 text-sm font-semibold leading-6 text-slate-900">Dashboard</div>
+                @php
+                    $pageTitle = $title ?? match(true) {
+                        request()->is('admin/categories*') => 'Categories',
+                        request()->is('admin/brands*') => 'Brands',
+                        request()->is('admin/products*') => 'Products',
+                        request()->is('admin/orders*') => 'Orders',
+                        request()->is('admin/users*') => 'Users',
+                        default => 'Dashboard'
+                    };
+                @endphp
+                <div class="flex-1 text-sm font-semibold leading-6 text-slate-900">{{ $pageTitle }}</div>
                 <div class="flex items-center gap-x-4">
-                    <a href="/" class="text-xs font-semibold text-slate-500 hover:text-slate-900">View Shop</a>
+                    <a href="{{ url('') }}" class="text-xs font-semibold text-slate-500 hover:text-slate-900">View Shop</a>
                 </div>
             </div>
 
@@ -157,5 +170,43 @@
     </div>
 
     @livewireScripts
+    
+    <!-- SweetAlert2 Scripts -->
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            window.addEventListener('swal', event => {
+                const detail = event.detail;
+                
+                const title = detail.title || (Array.isArray(detail) ? detail[0]?.title : 'Notification');
+                const text = detail.text || (Array.isArray(detail) ? detail[0]?.text : '');
+                const icon = detail.icon || (Array.isArray(detail) ? detail[0]?.icon : 'success');
+
+                Swal.fire({
+                    title: title,
+                    text: text,
+                    icon: icon,
+                    confirmButtonColor: '#4f46e5',
+                });
+            });
+
+            @if (session()->has('success'))
+                Swal.fire({
+                    title: 'Success!',
+                    text: "{{ session('success') }}",
+                    icon: 'success',
+                    confirmButtonColor: '#4f46e5'
+                });
+            @endif
+
+            @if (session()->has('error'))
+                Swal.fire({
+                    title: 'Error!',
+                    text: "{{ session('error') }}",
+                    icon: 'error',
+                    confirmButtonColor: '#4f46e5'
+                });
+            @endif
+        });
+    </script>
 </body>
 </html>

@@ -38,7 +38,7 @@ new class extends Component
     public function toggleAdmin($id)
     {
         if ($id === auth()->id()) {
-            session()->flash('error', 'You cannot revoke your own administrator privileges.');
+            $this->dispatch('swal', title: 'Error!', text: 'You cannot revoke your own administrator privileges.', icon: 'error');
             return;
         }
 
@@ -46,47 +46,37 @@ new class extends Component
         $user->is_admin = !$user->is_admin;
         $user->save();
 
-        session()->flash('success', "Updated privileges for '{$user->name}' successfully.");
+        $this->dispatch('swal', title: 'Success!', text: "Updated privileges for '{$user->name}' successfully.", icon: 'success');
     }
 
     public function deleteUser($id)
     {
         if ($id === auth()->id()) {
-            session()->flash('error', 'You cannot delete your own account.');
+            $this->dispatch('swal', title: 'Error!', text: 'You cannot delete your own account.', icon: 'error');
             return;
         }
 
         $user = User::findOrFail($id);
         $user->delete();
-        session()->flash('success', 'User deleted successfully.');
+        $this->dispatch('swal', title: 'Deleted!', text: 'User deleted successfully.', icon: 'success');
     }
 };
 ?>
 
 <div class="space-y-6">
     <!-- Header -->
-    <div class="flex items-center justify-between">
+    <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold text-slate-900">Users</h1>
             <p class="text-xs text-slate-500 mt-1">Manage user privileges and administrator status.</p>
         </div>
     </div>
 
-    <!-- Feedback messages -->
-    @if (session()->has('success'))
-        <div class="rounded-xl bg-emerald-50 border border-emerald-200 p-4 text-xs font-semibold text-emerald-700">
-            {{ session('success') }}
-        </div>
-    @endif
-    @if (session()->has('error'))
-        <div class="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs font-semibold text-rose-700">
-            {{ session('error') }}
-        </div>
-    @endif
+
 
     <!-- Toolbar -->
-    <div class="flex items-center justify-between gap-4">
-        <div class="flex-1 max-w-xs relative">
+    <div class="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-4">
+        <div class="w-full sm:max-w-xs relative">
             <input 
                 type="text" 
                 wire:model.live.debounce.300ms="search" 

@@ -40,7 +40,7 @@ new class extends Component
 
             <!-- Steps -->
             <div class="flex flex-col items-center">
-                <div class="h-8 w-8 rounded-full bg-indigo-650 text-white flex items-center justify-center text-xs font-bold ring-4 ring-white">1</div>
+                <div class="h-8 w-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold ring-4 ring-white">1</div>
                 <span class="text-xs font-bold text-slate-800 mt-2">Placed</span>
             </div>
             <div class="flex flex-col items-center">
@@ -85,7 +85,7 @@ new class extends Component
                     <div class="flex items-center justify-between py-3">
                         <div class="flex items-center gap-3">
                             <div class="h-10 w-10 flex-shrink-0 rounded bg-slate-50 overflow-hidden border border-slate-200">
-                                <img src="{{ $item->product->images[0] }}" class="h-full w-full object-cover">
+                                <img src="{{ $item->product->images[0] }}" alt="{{ $item->product->name }}" class="h-full w-full object-cover">
                             </div>
                             <div>
                                 <h4 class="text-xs font-bold text-slate-800">{{ $item->product->name }}</h4>
