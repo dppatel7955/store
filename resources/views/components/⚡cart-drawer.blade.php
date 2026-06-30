@@ -105,43 +105,49 @@ new class extends Component
              <div class="flex-1 overflow-y-auto py-6 px-4 sm:px-6">
                  @if(count($cart) > 0)
                      <div class="space-y-6">
-                         @foreach($cart as $item)
-                             <div class="flex items-center gap-4 bg-slate-50/70 p-3 rounded-xl border border-slate-200/60">
-                                 <!-- Thumbnail -->
-                                 <div class="h-16 w-16 flex-shrink-0 overflow-hidden rounded-lg bg-white border border-slate-200">
-                                     <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="h-full w-full object-cover">
-                                 </div>
-                                 <!-- Item details -->
-                                 <div class="flex-1">
-                                     <h3 class="text-sm font-semibold text-slate-800 line-clamp-1">
-                                         <a href="/shop" @click="open = false" class="hover:text-indigo-600 transition">{{ $item['name'] }}</a>
-                                     </h3>
-                                     <p class="text-xs text-slate-550 mt-0.5">Price: ₹{{ number_format($item['price']) }}</p>
-                                     
-                                     <!-- Quantity selector -->
-                                     <div class="flex items-center gap-2 mt-2">
-                                         <button wire:click="decreaseQuantity({{ $item['id'] }})" class="p-1 rounded bg-slate-205/60 hover:bg-slate-200 text-slate-700 transition">
-                                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4" />
-                                             </svg>
-                                         </button>
-                                         <span class="text-xs font-semibold text-slate-800 px-1">{{ $item['quantity'] }}</span>
-                                         <button wire:click="increaseQuantity({{ $item['id'] }})" class="p-1 rounded bg-slate-205/60 hover:bg-slate-200 text-slate-700 transition">
-                                             <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                                 <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
-                                             </svg>
-                                         </button>
-                                     </div>
-                                 </div>
-                                 <!-- Actions & Total -->
-                                 <div class="text-right">
-                                     <span class="text-sm font-bold text-slate-900">₹{{ number_format($item['total']) }}</span>
-                                     <button wire:click="removeItem({{ $item['id'] }})" class="block text-xs text-rose-605 hover:text-rose-700 mt-2 ml-auto transition">
-                                         Remove
-                                     </button>
-                                 </div>
-                             </div>
-                         @endforeach
+                          @foreach($cart as $item)
+                              <div class="flex gap-4 bg-slate-50/70 p-3 rounded-xl border border-slate-200/60">
+                                  <!-- Thumbnail -->
+                                  <div class="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-white border border-slate-200">
+                                      <img src="{{ $item['image'] }}" alt="{{ $item['name'] }}" class="h-full w-full object-cover">
+                                  </div>
+                                  
+                                  <!-- Info & Controls Container -->
+                                  <div class="flex-1 flex flex-col justify-between">
+                                      <div>
+                                          <div class="flex justify-between items-start gap-2">
+                                              <h3 class="text-xs font-bold text-slate-800 line-clamp-2">
+                                                  <a href="{{ route('shop') }}" @click="open = false" class="hover:text-indigo-650 transition">{{ $item['name'] }}</a>
+                                              </h3>
+                                              <span class="text-xs font-extrabold text-slate-900 whitespace-nowrap">₹{{ number_format($item['total']) }}</span>
+                                          </div>
+                                          <p class="text-[10px] text-slate-450 mt-0.5">Price: ₹{{ number_format($item['price']) }}</p>
+                                      </div>
+
+                                      <!-- Quantity & Remove -->
+                                      <div class="flex items-center justify-between mt-3">
+                                          <!-- Quantity selector -->
+                                          <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
+                                              <button wire:click="decreaseQuantity({{ $item['id'] }})" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
+                                                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4" />
+                                                  </svg>
+                                              </button>
+                                              <span class="text-xs font-bold text-slate-800 px-1 min-w-[16px] text-center">{{ $item['quantity'] }}</span>
+                                              <button wire:click="increaseQuantity({{ $item['id'] }})" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
+                                                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                      <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
+                                                  </svg>
+                                              </button>
+                                          </div>
+                                          
+                                          <button wire:click="removeItem({{ $item['id'] }})" class="text-[10px] font-bold text-rose-600 hover:text-rose-700 transition">
+                                              Remove
+                                          </button>
+                                      </div>
+                                  </div>
+                              </div>
+                          @endforeach
                      </div>
                  @else
                      <div class="text-center py-12">

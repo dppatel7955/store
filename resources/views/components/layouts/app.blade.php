@@ -74,7 +74,7 @@
 
                     <!-- Logo -->
                     <div class="flex-shrink-0 flex items-center">
-                        <a href="{{ url('')}}" class="flex items-center gap-2">
+                        <a href="{{ route('home') }}" class="flex items-center gap-2">
                             <span class="text-xl sm:text-2xl font-extrabold tracking-wider bg-gradient-to-r from-indigo-600 via-purple-650 to-pink-600 bg-clip-text text-transparent">
                                 SAFFRON STORE
                             </span>
@@ -84,13 +84,13 @@
 
                 <!-- Navigation Links (Desktop) -->
                 <nav class="hidden md:flex items-center space-x-8 text-sm font-semibold text-slate-650">
-                    <a href="{{ url('')}}" class="hover:text-indigo-600 transition-colors {{ request()->is('/') ? 'text-indigo-600 font-bold' : '' }}">Home</a>
-                    <a href="{{ url('shop')}}" class="hover:text-indigo-600 transition-colors {{ request()->is('shop*') ? 'text-indigo-600 font-bold' : '' }}">Shop</a>
+                    <a href="{{ route('home') }}" class="hover:text-indigo-600 transition-colors {{ request()->is('/') ? 'text-indigo-600 font-bold' : '' }}">Home</a>
+                    <a href="{{ route('shop') }}" class="hover:text-indigo-600 transition-colors {{ request()->is('shop*') ? 'text-indigo-600 font-bold' : '' }}">Shop</a>
                 </nav>
 
                 <!-- Search Bar (Desktop/Tablet) -->
                 <div class="flex-1 max-w-md mx-4 hidden sm:block">
-                    <form action="{{ url('shop')}}" method="GET" class="relative">
+                    <form action="{{ route('shop') }}" method="GET" class="relative">
                         <input 
                             type="text" 
                             name="search" 
@@ -112,7 +112,7 @@
                     <!-- Admin Panel Link (Desktop only) -->
                     @auth
                         @if(auth()->user()->is_admin)
-                            <a href="{{ url('admin')}}" class="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1 hover:bg-indigo-100 transition md:inline-flex hidden">
+                            <a href="{{ route('admin.dashboard') }}" class="text-xs font-bold text-indigo-600 bg-indigo-50 border border-indigo-200 rounded-full px-3 py-1 hover:bg-indigo-100 transition md:inline-flex hidden">
                                 Admin Panel
                             </a>
                         @endif
@@ -132,15 +132,15 @@
                                 <div class="px-4 py-2 border-b border-slate-100 text-xs text-slate-400">
                                     Signed in as<br><span class="font-bold text-slate-800">{{ auth()->user()->email }}</span>
                                 </div>
-                                <a href="{{ url('orders')}}" class="block px-4 py-2 hover:bg-slate-50 hover:text-slate-900 transition">My Orders</a>
-                                <form method="POST" action="/logout" class="block w-full text-left">
+                                <a href="{{ route('orders') }}" class="block px-4 py-2 hover:bg-slate-50 hover:text-slate-900 transition">My Orders</a>
+                                <form method="POST" action="{{ route('logout') }}" class="block w-full text-left">
                                     @csrf
                                     <button type="submit" class="w-full text-left px-4 py-2 hover:bg-slate-50 hover:text-slate-900 transition">Sign Out</button>
                                 </form>
                             </div>
                         </div>
                     @else
-                        <a href="{{ url('login')}}" class="text-sm font-bold text-slate-650 hover:text-indigo-600 transition hidden md:block">Sign In</a>
+                        <a href="{{ route('login') }}" class="text-sm font-bold text-slate-650 hover:text-indigo-600 transition hidden md:block">Sign In</a>
                     @endauth
 
                     <!-- Dynamic Livewire Cart Trigger -->
@@ -157,12 +157,12 @@
             class="md:hidden border-t border-slate-200 bg-white px-4 pt-2 pb-4 space-y-2 shadow-inner"
             style="display: none;"
         >
-            <a href="{{ url('')}}" class="block px-3 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('/') ? 'bg-indigo-50/50 text-indigo-650' : '' }}">Home</a>
-            <a href="{{ url('shop')}}" class="block px-3 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('shop*') ? 'bg-indigo-50/50 text-indigo-650' : '' }}">Shop</a>
+            <a href="{{ route('home') }}" class="block px-3 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('/') ? 'bg-indigo-50/50 text-indigo-650' : '' }}">Home</a>
+            <a href="{{ route('shop') }}" class="block px-3 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('shop*') ? 'bg-indigo-50/50 text-indigo-650' : '' }}">Shop</a>
             
             <!-- Mobile Search Bar (under sm screen width) -->
             <div class="px-3 py-1 sm:hidden">
-                <form action="{{ url('shop')}}" method="GET" class="relative">
+                <form action="{{ route('shop') }}" method="GET" class="relative">
                     <input 
                         type="text" 
                         name="search" 
@@ -181,7 +181,7 @@
             <!-- Admin Link inside Mobile Menu -->
             @auth
                 @if(auth()->user()->is_admin)
-                    <a href="{{ url('admin')}}" class="block px-3 py-2 rounded-xl text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">
+                    <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-xl text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">
                         Admin Panel
                     </a>
                 @endif
@@ -200,8 +200,8 @@
                         </div>
                     </div>
                     <div class="space-y-1">
-                        <a href="{{ url('orders')}}" class="block py-1.5 text-xs font-semibold text-slate-650 hover:text-slate-905">My Orders</a>
-                        <form method="POST" action="/logout" class="block w-full">
+                        <a href="{{ route('orders') }}" class="block py-1.5 text-xs font-semibold text-slate-650 hover:text-slate-905">My Orders</a>
+                        <form method="POST" action="{{ route('logout') }}" class="block w-full">
                             @csrf
                             <button type="submit" class="block w-full text-left py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700">Sign Out</button>
                         </form>
@@ -209,7 +209,7 @@
                 </div>
             @else
                 <div class="border-t border-slate-100 pt-3 px-3">
-                    <a href="{{ url('login')}}" class="block text-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-2 text-xs font-bold text-white shadow hover:from-indigo-650 hover:to-purple-705 transition">Sign In</a>
+                    <a href="{{ route('login') }}" class="block text-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-2 text-xs font-bold text-white shadow hover:from-indigo-650 hover:to-purple-705 transition">Sign In</a>
                 </div>
             @endauth
         </div>
@@ -234,7 +234,7 @@
                     <h4 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">Shop</h4>
                     <ul class="space-y-2 text-sm text-slate-400">
                         @foreach (\App\Models\Category::where('is_active',1)->inRandomOrder()->limit(5)->get() as $item)    
-                            <li><a href="{{ url('shop?category=' . $item->slug) }}" class="hover:text-indigo-400 transition">{{$item->name}}</a></li>
+                            <li><a href="{{ route('shop', ['category' => $item->slug]) }}" class="hover:text-indigo-400 transition">{{$item->name}}</a></li>
                         @endforeach
                     </ul>
                 </div>

@@ -37,7 +37,7 @@ Route::post('/logout', function () {
     session()->invalidate();
     session()->regenerateToken();
     return redirect()->route('home');
-});
+})->name('logout');
 
 Route::get('/checkout', function () {
     if (!auth()->check()) {
