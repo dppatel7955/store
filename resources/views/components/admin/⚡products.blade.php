@@ -313,7 +313,7 @@ new class extends Component
                         <tr class="hover:bg-slate-50/50 transition duration-150">
                             <!-- Product Image & Name -->
                             <td class="p-4">
-                                <a href="/shop/{{ $product->slug }}" target="_blank" class="flex items-center gap-3 group">
+                                <a href="{{ route('shop.detail', ['slug' => $product->slug]) }}" target="_blank" class="flex items-center gap-3 group">
                                     <img src="{{ is_array($product->images) ? ($product->images[0] ?? '') : '' }}" alt="{{ $product->name }}" class="h-10 w-10 object-cover rounded-lg border border-slate-200 flex-shrink-0 group-hover:border-indigo-500 transition">
                                     <div class="flex flex-col">
                                         <span class="text-xs font-bold text-slate-800 leading-normal group-hover:text-indigo-600 transition">{{ $product->name }}</span>

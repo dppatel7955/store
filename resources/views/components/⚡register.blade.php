@@ -2,8 +2,11 @@
 
 use Livewire\Component;
 use App\Models\User;
+use App\Models\VerificationCode;
+use App\Mail\VerificationMail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Support\Facades\Mail;
 
 new class extends Component
 {
@@ -17,6 +20,27 @@ new class extends Component
     public string $generatedOtp = '';
     public string $enteredOtp = '';
 
+    /**
+     * Dispatch verification code email to customer.
+     */
+    protected function sendVerificationEmail(string $email, string $code)
+    {
+        // Log locally as a backup
+        Log::info("Verification code for customer registration (Email: {$email}): {$code}");
+
+        try {
+            Mail::to($email)->send(new VerificationMail($code));
+        } catch (\Exception $e) {
+            Log::error("Failed to send verification email to {$email}: " . $e->getMessage());
+            $this->dispatch('swal', 
+                title: 'SMTP Dispatch Error', 
+                text: 'Unable to send verification email. Please contact support or verify your email settings.', 
+                icon: 'error',
+                toast: false
+            );
+        }
+    }
+
     public function sendOtp()
     {
         $this->validate([
@@ -26,29 +50,29 @@ new class extends Component
             'password' => 'required|string|min:6',
         ]);
 
-        // Generate OTP
+        // Generate OTP code
         $this->generatedOtp = (string) rand(100000, 999999);
         $this->otpSent = true;
 
-        // Log the OTP code for offline verification
-        Log::info("OTP Code for customer registration (Phone: {$this->phone}): {$this->generatedOtp}");
+        // Store OTP in database
+        VerificationCode::updateOrCreate(
+            ['type' => 'email_verify', 'identifier' => $this->email],
+            [
+                'code' => $this->generatedOtp,
+                'expires_at' => now()->addMinutes(10),
+                'verified_at' => null,
+            ]
+        );
 
-        // Dispatch sweetalert based on environment debug mode
-        if (config('app.debug')) {
-            $this->dispatch('swal', 
-                title: 'OTP Code Dispatched!', 
-                text: 'Your registration verification code is: ' . $this->generatedOtp, 
-                icon: 'info',
-                toast: false
-            );
-        } else {
-            $this->dispatch('swal', 
-                title: 'OTP Dispatched!', 
-                text: 'A 6-digit verification code has been sent to your phone number.', 
-                icon: 'success',
-                toast: true
-            );
-        }
+        // Dispatch Email
+        $this->sendVerificationEmail($this->email, $this->generatedOtp);
+
+        $this->dispatch('swal', 
+            title: 'Verification Code Sent!', 
+            text: 'A 6-digit verification code has been sent to your email address.', 
+            icon: 'success',
+            toast: true
+        );
     }
 
     public function verifyAndRegister()
@@ -57,10 +81,22 @@ new class extends Component
             'enteredOtp' => 'required|numeric|digits:6',
         ]);
 
-        if ($this->enteredOtp !== $this->generatedOtp) {
-            $this->addError('enteredOtp', 'The entered verification code is incorrect.');
+        // Fetch and validate OTP from database
+        $verification = VerificationCode::where('type', 'email_verify')
+            ->where('identifier', $this->email)
+            ->first();
+
+        if (!$verification || !$verification->isValid($this->enteredOtp)) {
+            if ($verification && $verification->isExpired()) {
+                $this->addError('enteredOtp', 'The verification code has expired. Please resend code.');
+            } else {
+                $this->addError('enteredOtp', 'The entered verification code is incorrect or has already been used.');
+            }
             return;
         }
+
+        // Mark OTP as verified
+        $verification->update(['verified_at' => now()]);
 
         // Create Customer User
         $user = User::create([
@@ -69,6 +105,7 @@ new class extends Component
             'phone' => $this->phone,
             'password' => Hash::make($this->password),
             'is_admin' => false,
+            'email_verified_at' => now()
         ]);
 
         auth()->login($user);
@@ -84,23 +121,25 @@ new class extends Component
         $this->generatedOtp = (string) rand(100000, 999999);
         $this->enteredOtp = '';
 
-        Log::info("Resent OTP Code for customer registration (Phone: {$this->phone}): {$this->generatedOtp}");
+        // Store new OTP in database
+        VerificationCode::updateOrCreate(
+            ['type' => 'email_verify', 'identifier' => $this->email],
+            [
+                'code' => $this->generatedOtp,
+                'expires_at' => now()->addMinutes(10),
+                'verified_at' => null,
+            ]
+        );
+
+        // Dispatch new Email
+        $this->sendVerificationEmail($this->email, $this->generatedOtp);
         
-        if (config('app.debug')) {
-            $this->dispatch('swal', 
-                title: 'OTP Resent!', 
-                text: 'Your new verification code is: ' . $this->generatedOtp, 
-                icon: 'info',
-                toast: false
-            );
-        } else {
-            $this->dispatch('swal', 
-                title: 'OTP Resent!', 
-                text: 'A new 6-digit verification code has been sent to your phone number.', 
-                icon: 'success',
-                toast: true
-            );
-        }
+        $this->dispatch('swal', 
+            title: 'Verification Code Resent!', 
+            text: 'A new 6-digit verification code has been sent to your email address.', 
+            icon: 'success',
+            toast: true
+        );
     }
 };
 ?>
@@ -145,20 +184,22 @@ new class extends Component
                     @error('password') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                 </div>
 
-                <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition duration-300">
-                    Send Verification OTP
+                <button type="submit" wire:loading.attr="disabled" wire:target="sendOtp" class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition duration-300 flex items-center justify-center gap-2">
+                    <span wire:loading.remove wire:target="sendOtp">Send Verification Code</span>
+                    <span wire:loading wire:target="sendOtp" class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Sending Code...
+                    </span>
                 </button>
             </form>
         @else
             <!-- Step 2: Input Verification OTP -->
             <form wire:submit="verifyAndRegister" class="space-y-4">
                 <div class="rounded-xl bg-indigo-50 border border-indigo-200 p-4 text-xs text-indigo-700 leading-relaxed space-y-2">
-                    <p>A verification code has been dispatched to <strong>{{ $phone }}</strong>. Please enter the 6-digit OTP to complete registration.</p>
-                    @if(config('app.debug'))
-                        <p class="font-bold text-indigo-900 mt-2 bg-indigo-100/50 p-2 rounded-lg border border-indigo-200">
-                            [Development Mode Helper] Active Verification OTP: <span class="tracking-widest text-sm font-extrabold select-all">{{ $generatedOtp }}</span>
-                        </p>
-                    @endif
+                    <p>A verification code has been sent to your email address: <strong>{{ $email }}</strong>. Please enter the 6-digit code below to complete registration.</p>
                 </div>
 
                 <div>
@@ -168,12 +209,28 @@ new class extends Component
                 </div>
 
                 <div class="flex items-center justify-between text-xs">
-                    <button type="button" wire:click="resendOtp" class="font-bold text-indigo-600 hover:text-indigo-700">Resend Code</button>
+                    <button type="button" wire:click="resendOtp" wire:loading.attr="disabled" wire:target="resendOtp" class="font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 disabled:opacity-50">
+                        <span wire:loading.remove wire:target="resendOtp">Resend Code</span>
+                        <span wire:loading wire:target="resendOtp" class="flex items-center gap-1.5 text-indigo-500">
+                            <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                            </svg>
+                            Sending...
+                        </span>
+                    </button>
                     <button type="button" wire:click="$set('otpSent', false)" class="text-slate-500 hover:text-slate-600">Back to edit details</button>
                 </div>
 
-                <button type="submit" class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-650 py-3 text-sm font-bold text-white shadow hover:from-emerald-600 hover:to-teal-700 transition duration-300">
-                    Verify & Create Account
+                <button type="submit" wire:loading.attr="disabled" wire:target="verifyAndRegister" class="w-full rounded-xl bg-gradient-to-r from-emerald-500 to-teal-650 py-3 text-sm font-bold text-white shadow hover:from-emerald-600 hover:to-teal-700 transition duration-300 flex items-center justify-center gap-2">
+                    <span wire:loading.remove wire:target="verifyAndRegister">Verify & Create Account</span>
+                    <span wire:loading wire:target="verifyAndRegister" class="flex items-center justify-center gap-2">
+                        <svg class="animate-spin h-4 w-4 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                            <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                            <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                        </svg>
+                        Verifying...
+                    </span>
                 </button>
             </form>
         @endif

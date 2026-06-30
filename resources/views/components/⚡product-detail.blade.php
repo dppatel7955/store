@@ -56,7 +56,7 @@ new class extends Component
     public function submitReview()
     {
         if (!auth()->check()) {
-            return redirect('/login');
+            return redirect()->route('login');
         }
 
         $this->validate([
@@ -368,7 +368,7 @@ new class extends Component
                     </form>
                 @else
                     <p class="text-xs text-slate-500 leading-relaxed text-center py-6">
-                        You must be <a href="/login" class="text-indigo-650 hover:underline">signed in</a> to write a review.
+                        You must be <a href="{{ route('login') }}" class="text-indigo-650 hover:underline">signed in</a> to write a review.
                     </p>
                 @endif
             </div>
@@ -381,7 +381,7 @@ new class extends Component
             <h2 class="text-2xl font-extrabold text-slate-900 mb-6">You May Also Like</h2>
             <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
                 @foreach($relatedProducts as $prod)
-                    <a href="/shop/{{ $prod->slug }}" class="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-indigo-600 hover:shadow-md transition duration-300 flex flex-col h-full shadow-sm">
+                    <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-indigo-600 hover:shadow-md transition duration-300 flex flex-col h-full shadow-sm">
                         <div class="aspect-square relative overflow-hidden bg-slate-50">
                             <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-550">
                         </div>

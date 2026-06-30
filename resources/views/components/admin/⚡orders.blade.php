@@ -154,7 +154,7 @@ new class extends Component
                             <!-- Actions -->
                             <td class="p-4 text-right">
                                 <a 
-                                    href="/admin/orders/{{ $order->id }}" 
+                                    href="{{ route('admin.orders.detail', ['id' => $order->id]) }}" 
                                     class="text-indigo-605 hover:text-indigo-705 text-xs font-bold transition"
                                 >
                                     View Details &rarr;

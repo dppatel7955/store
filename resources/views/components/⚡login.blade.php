@@ -15,6 +15,42 @@ new class extends Component
         ]);
 
         if (auth()->attempt(['email' => $this->email, 'password' => $this->password])) {
+            $user = auth()->user();
+
+            if ($user->email_verified_at === null) {
+                // Generate verification code
+                $code = (string) rand(100000, 999999);
+
+                // Store code in database
+                \App\Models\VerificationCode::updateOrCreate(
+                    ['type' => 'email_verify', 'identifier' => $user->email],
+                    [
+                        'code' => $code,
+                        'expires_at' => now()->addMinutes(10),
+                        'verified_at' => null,
+                    ]
+                );
+
+                // Dispatch Email
+                \Illuminate\Support\Facades\Log::info("Verification code for unverified login ({$user->email}): {$code}");
+                try {
+                    \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerificationMail($code));
+                } catch (\Exception $e) {
+                    \Illuminate\Support\Facades\Log::error("Failed to send login verification email: " . $e->getMessage());
+                }
+
+                // Log out user since they are not verified yet
+                auth()->logout();
+                session()->invalidate();
+                session()->regenerateToken();
+
+                // Redirect to verify-email portal
+                return redirect()->route('verify-email', [
+                    'email' => $this->email,
+                    'redirect' => request()->query('redirect', '/shop')
+                ]);
+            }
+
             return redirect()->intended('/shop');
         }
 

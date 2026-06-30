@@ -48,7 +48,7 @@ new class extends Component
     <!-- Breadcrumbs / Back button -->
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div class="flex items-center gap-3">
-            <a href="/admin/orders" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:shadow shadow-sm transition">
+            <a href="{{ route('admin.orders') }}" class="p-2 bg-white border border-slate-200 rounded-xl text-slate-500 hover:text-slate-900 hover:shadow shadow-sm transition">
                 <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
@@ -236,7 +236,7 @@ new class extends Component
                     </button>
 
                     <a 
-                        href="/admin/orders/{{ $order->id }}/invoice" 
+                        href="{{ route('admin.orders.invoice', ['id' => $order->id]) }}" 
                         target="_blank"
                         class="w-full inline-flex items-center justify-center gap-1.5 rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition"
                     >

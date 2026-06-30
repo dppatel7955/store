@@ -16,7 +16,7 @@ class AdminAuthenticate
     public function handle(Request $request, Closure $next): Response
     {
         if (!auth()->check()) {
-            return redirect('/admin/login');
+            return redirect()->route('admin.login');
         }
 
         if (!auth()->user()->is_admin) {

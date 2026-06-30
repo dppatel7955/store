@@ -149,7 +149,7 @@ new class extends Component
                              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
                          </svg>
                          <p class="text-slate-500 font-medium">Your cart is empty.</p>
-                         <a href="/shop" @click="open = false" class="inline-block mt-4 text-xs font-semibold text-indigo-650 hover:underline">Start shopping</a>
+                         <a href="{{ route('shop') }}" @click="open = false" class="inline-block mt-4 text-xs font-semibold text-indigo-650 hover:underline">Start shopping</a>
                      </div>
                  @endif
              </div>
@@ -164,7 +164,7 @@ new class extends Component
                      <p class="text-xs text-slate-500">Shipping and taxes will be calculated at checkout.</p>
                      
                      <div class="pt-2">
-                         <a href="/checkout" class="flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition duration-300">
+                         <a href="{{ route('checkout') }}" class="flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition duration-300">
                              Checkout
                          </a>
                      </div>

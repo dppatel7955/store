@@ -232,7 +232,7 @@ new class extends Component
 
             <div class="flex-1 mt-4 space-y-4">
                 @forelse($recentOrders as $order)
-                    <a href="/admin/orders/{{ $order->id }}" class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition duration-150">
+                    <a href="{{ route('admin.orders.detail', ['id' => $order->id]) }}" class="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-100 hover:border-indigo-200 hover:shadow-sm transition duration-150">
                         <div class="space-y-1">
                             <div class="text-xs font-bold text-slate-800">#{{ $order->id }} - {{ $order->user->name }}</div>
                             <div class="text-[10px] text-slate-450 font-semibold">{{ $order->created_at->diffForHumans() }}</div>
@@ -262,7 +262,7 @@ new class extends Component
                 @endforelse
             </div>
             
-            <a href="/admin/orders" class="block w-full text-center rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition mt-4">
+            <a href="{{ route('admin.orders') }}" class="block w-full text-center rounded-xl bg-slate-100 hover:bg-slate-200 border border-slate-200 py-2.5 text-xs font-bold text-slate-700 shadow-sm transition mt-4">
                 View All Orders &rarr;
             </a>
         </div>

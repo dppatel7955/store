@@ -16,7 +16,7 @@ new class extends Component
 
         if (auth()->attempt(['email' => $this->email, 'password' => $this->password])) {
             if (auth()->user()->is_admin) {
-                return redirect()->intended('/admin');
+                return redirect()->intended(route('admin.dashboard'));
             }
 
             // Log out non-admin users attempting to login via admin panel

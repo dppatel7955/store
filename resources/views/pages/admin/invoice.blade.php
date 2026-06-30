@@ -20,7 +20,7 @@
 <body class="bg-slate-50 text-slate-800 font-sans p-6 sm:p-12">
     <!-- Print toolbar -->
     <div class="max-w-4xl mx-auto mb-6 flex justify-between items-center no-print">
-        <a href="/admin/orders/{{ $order->id }}" class="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
+        <a href="{{ route('admin.orders.detail', ['id' => $order->id]) }}" class="text-xs font-bold text-indigo-600 hover:underline flex items-center gap-1">
             &larr; Back to Order Details
         </a>
         <button onclick="window.print()" class="bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs py-2 px-4 rounded-xl shadow-sm transition">
