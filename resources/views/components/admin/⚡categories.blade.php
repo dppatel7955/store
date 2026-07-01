@@ -101,7 +101,7 @@ new class extends Component
         $this->validate($rules);
 
         if ($this->imageFile) {
-            $this->image = '/storage/' . $this->imageFile->store('categories', 'public');
+            $this->image = '/uploads/' . $this->imageFile->store('categories', 'custom_public');
         }
 
         if (empty($this->image)) {

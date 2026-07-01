@@ -96,7 +96,7 @@ new class extends Component
         $this->validate($rules);
 
         if ($this->logoFile) {
-            $this->logo = '/storage/' . $this->logoFile->store('brands', 'public');
+            $this->logo = '/uploads/' . $this->logoFile->store('brands', 'custom_public');
         }
 
         if (empty($this->logo)) {

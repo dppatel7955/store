@@ -183,9 +183,17 @@
 
                 Swal.fire({
                     title: title,
+                    toast: true,
+                    position: 'top-end',
                     text: text,
                     icon: icon,
-                    confirmButtonColor: '#4f46e5',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
                 });
             });
 
@@ -194,7 +202,15 @@
                     title: 'Success!',
                     text: "{{ session('success') }}",
                     icon: 'success',
-                    confirmButtonColor: '#4f46e5'
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
                 });
             @endif
 
@@ -203,7 +219,15 @@
                     title: 'Error!',
                     text: "{{ session('error') }}",
                     icon: 'error',
-                    confirmButtonColor: '#4f46e5'
+                    toast: true,
+                    position: 'top-end',
+                    showConfirmButton: false,
+                    timer: 3000,
+                    timerProgressBar: true,
+                    didOpen: (toast) => {
+                        toast.onmouseenter = Swal.stopTimer;
+                        toast.onmouseleave = Swal.resumeTimer;
+                    }
                 });
             @endif
         });

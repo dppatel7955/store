@@ -59,7 +59,7 @@ new class extends Component
             'newBannerSortOrder' => 'required|integer|min:0',
         ]);
 
-        $imagePath = '/storage/' . $this->newBannerImage->store('banners', 'public');
+        $imagePath = '/uploads/' . $this->newBannerImage->store('banners', 'custom_public');
 
         Banner::create([
             'image_path' => $imagePath,
@@ -81,8 +81,8 @@ new class extends Component
         $banner = Banner::find($id);
         if ($banner) {
             // Delete file from disk if it exists
-            $filePath = str_replace('/storage/', '', $banner->image_path);
-            \Illuminate\Support\Facades\Storage::disk('public')->delete($filePath);
+            $filePath = str_replace('/uploads/', '', $banner->image_path);
+            \Illuminate\Support\Facades\Storage::disk('custom_public')->delete($filePath);
             
             $banner->delete();
         }

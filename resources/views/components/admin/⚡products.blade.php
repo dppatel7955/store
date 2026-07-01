@@ -176,8 +176,8 @@ new class extends Component
 
         if ($this->imageFiles) {
             foreach ($this->imageFiles as $file) {
-                $path = $file->store('products', 'public');
-                $this->imagesList[] = asset('storage/' . $path);
+                $path = $file->store('products', 'custom_public');
+                $this->imagesList[] = '/uploads/' . $path;
             }
         }
         do{
