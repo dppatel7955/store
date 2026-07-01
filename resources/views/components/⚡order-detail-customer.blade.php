@@ -25,9 +25,24 @@ new class extends Component
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
                 </svg>
             </a>
-            <div>
-                <h1 class="text-2xl font-extrabold text-slate-900">Order Details</h1>
-                <p class="text-xs text-slate-550 mt-1">Invoice summary and delivery updates for order #{{ $order->id }}.</p>
+            <div class="space-y-1">
+                <div class="flex flex-wrap items-center gap-2">
+                    <h1 class="text-2xl font-extrabold text-slate-900">Order Details</h1>
+                    @php
+                        $statusColors = match($order->status) {
+                            'pending' => 'bg-amber-50 text-amber-700 ring-amber-600/20',
+                            'processing' => 'bg-blue-50 text-blue-700 ring-blue-600/20',
+                            'shipped' => 'bg-indigo-50 text-indigo-700 ring-indigo-600/20',
+                            'delivered' => 'bg-emerald-50 text-emerald-700 ring-emerald-600/20',
+                            'cancelled' => 'bg-rose-50 text-rose-700 ring-rose-600/20',
+                            default => 'bg-slate-50 text-slate-700 ring-slate-600/20'
+                        };
+                    @endphp
+                    <span class="inline-flex items-center rounded-md px-2 py-0.5 text-[10px] font-bold ring-1 ring-inset {{ $statusColors }} capitalize">
+                        {{ $order->status }}
+                    </span>
+                </div>
+                <p class="text-xs text-slate-550">Invoice summary and delivery updates for order #{{ $order->id }}.</p>
             </div>
         </div>
         <div class="sm:text-right">
@@ -179,11 +194,15 @@ new class extends Component
                 <div class="space-y-3.5 text-xs">
                     <div>
                         <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Method</span>
-                        <span class="block text-slate-850 font-bold uppercase mt-0.5">{{ $order->payment_method === 'cod' ? 'Cash on Delivery' : 'Credit Card (Stripe)' }}</span>
+                        <span class="block text-slate-850 font-bold mt-0.5 capitalize">{{ $order->payment_method === 'cod' ? 'Cash on Delivery' : ($order->payment_method === 'razorpay' ? 'Razorpay Online Payment' : $order->payment_method) }}</span>
                     </div>
                     <div>
                         <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Status</span>
                         <span class="block text-slate-850 font-bold mt-0.5 capitalize">{{ $order->payment_status }}</span>
+                    </div>
+                    <div>
+                        <span class="block text-[10px] uppercase font-bold text-slate-400">Order Status</span>
+                        <span class="block text-slate-850 font-bold mt-0.5 capitalize">{{ $order->status }}</span>
                     </div>
                 </div>
             </div>

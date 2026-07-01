@@ -99,3 +99,19 @@ Route::middleware(['auth', 'admin'])->group(function () {
     })->name('admin.orders.invoice');
 });
 
+Route::get('/privacy-policy', function () {
+    return view('pages.privacy-policy');
+})->name('privacy-policy');
+
+Route::get('/terms-of-service', function () {
+    return view('pages.terms-of-service');
+})->name('terms-of-service');
+
+Route::get('/payment-methods', function () {
+    return view('pages.payment-methods');
+})->name('payment-methods');
+
+Route::get('/shipping-policy', function () {
+    return view('pages.shipping-policy');
+})->name('shipping-policy');
+

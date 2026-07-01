@@ -241,18 +241,16 @@
                 <div>
                     <h4 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">Support</h4>
                     <ul class="space-y-2 text-sm text-slate-400">
-                        <li><a href="#" class="hover:text-indigo-400 transition">Help Center</a></li>
-                        <li><a href="#" class="hover:text-indigo-400 transition">Track Order</a></li>
-                        <li><a href="#" class="hover:text-indigo-400 transition">Returns & Exchanges</a></li>
-                        <li><a href="#" class="hover:text-indigo-400 transition">Shipping Policy</a></li>
+                        <li><a href="{{ route('orders') }}" class="hover:text-indigo-400 transition">Track Order</a></li>
+                        <li><a href="{{ route('shipping-policy') }}" class="hover:text-indigo-400 transition">Shipping Policy</a></li>
                     </ul>
                 </div>
                 <div>
                     <h4 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">Legal</h4>
                     <ul class="space-y-2 text-sm text-slate-400">
-                        <li><a href="#" class="hover:text-indigo-400 transition">Privacy Policy</a></li>
-                        <li><a href="#" class="hover:text-indigo-400 transition">Terms of Service</a></li>
-                        <li><a href="#" class="hover:text-indigo-400 transition">Payment Methods</a></li>
+                        <li><a href="{{ route('privacy-policy') }}" class="hover:text-indigo-400 transition">Privacy Policy</a></li>
+                        <li><a href="{{ route('terms-of-service') }}" class="hover:text-indigo-400 transition">Terms of Service</a></li>
+                        <li><a href="{{ route('payment-methods') }}" class="hover:text-indigo-400 transition">Payment Methods</a></li>
                     </ul>
                 </div>
             </div>
