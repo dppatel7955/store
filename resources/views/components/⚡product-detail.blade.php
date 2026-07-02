@@ -9,6 +9,7 @@ new class extends Component
 {
     public Product $product;
     public int $quantity = 1;
+    public ?int $selectedVariantId = null;
     
     // Review form
     public int $rating = 5;
@@ -18,7 +19,12 @@ new class extends Component
 
     public function mount(string $slug)
     {
-        $this->product = Product::where('slug', $slug)->with(['reviews.user', 'brand', 'category'])->firstOrFail();
+        $this->product = Product::where('slug', $slug)
+            ->with(['reviews.user', 'brand', 'category', 'variants' => function($q) {
+                $q->where('is_active', true);
+            }])
+            ->firstOrFail();
+            
         $this->relatedProducts = Product::where('category_id', $this->product->category_id)
             ->where('id', '!=', $this->product->id)
             ->where('is_active', true)
@@ -28,7 +34,15 @@ new class extends Component
 
     public function incrementQuantity()
     {
-        if ($this->quantity < $this->product->stock) {
+        $maxStock = $this->product->stock;
+        if ($this->selectedVariantId) {
+            $variant = $this->product->variants->firstWhere('id', $this->selectedVariantId);
+            if ($variant) {
+                $maxStock = $variant->stock;
+            }
+        }
+
+        if ($this->quantity < $maxStock) {
             $this->quantity++;
         }
     }
@@ -42,15 +56,35 @@ new class extends Component
 
     public function addToCart()
     {
-        if ($this->product->stock <= 0) {
-            $this->dispatch('swal', title: 'Out of Stock!', text: 'Sorry, this product is currently out of stock.', icon: 'error');
+        $stock = $this->product->stock;
+        $variant = null;
+
+        if ($this->selectedVariantId) {
+            $variant = $this->product->variants->firstWhere('id', $this->selectedVariantId);
+            if ($variant) {
+                $stock = $variant->stock;
+            }
+        }
+
+        if ($stock <= 0) {
+            $this->dispatch('swal', title: 'Out of Stock!', text: 'Sorry, this item/variant is currently out of stock.', icon: 'error');
+            return;
+        }
+
+        if ($this->quantity > $stock) {
+            $this->dispatch('swal', title: 'Insufficient Stock!', text: "Only {$stock} units available.", icon: 'warning');
             return;
         }
         
-        CartService::add($this->product->id, $this->quantity);
+        CartService::add($this->product->id, $this->quantity, $this->selectedVariantId);
         $this->dispatch('cart-updated');
         $this->dispatch('toggle-cart-drawer');
-        $this->dispatch('swal', title: 'Added to Cart!', text: "'{$this->product->name}' has been added to your shopping cart.", icon: 'success');
+        
+        $displayName = $this->product->name;
+        if ($variant) {
+            $displayName .= " ({$variant->name})";
+        }
+        $this->dispatch('swal', title: 'Added to Cart!', text: "'{$displayName}' has been added to your shopping cart.", icon: 'success');
     }
 
     public function submitReview()
@@ -102,27 +136,57 @@ new class extends Component
     </nav>
 
     <!-- Product Intro -->
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-12">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-12" x-data="{
+        productImages: {{ json_encode($product->images) }},
+        activeImage: '{{ $product->images[0] ?? '' }}',
+        activeImagesList: {{ json_encode($product->images) }},
+        selectedVariantId: @entangle('selectedVariantId'),
+        variants: {{ json_encode($product->variants) }},
+        selectedVariantPrice: null,
+        selectedVariantStock: {{ $product->stock }},
+        selectedVariantSku: '{{ $product->sku }}',
+        selectVariant(variantId) {
+            this.selectedVariantId = variantId;
+            let variant = this.variants.find(v => v.id == variantId);
+            if (variant) {
+                this.selectedVariantPrice = variant.price;
+                this.selectedVariantStock = variant.stock;
+                this.selectedVariantSku = variant.sku || '{{ $product->sku }}';
+                
+                if (variant.images && variant.images.length > 0) {
+                    this.activeImagesList = variant.images;
+                    this.activeImage = variant.images[0];
+                } else {
+                    this.activeImagesList = this.productImages;
+                    this.activeImage = this.productImages[0] ?? '';
+                }
+            } else {
+                this.selectedVariantPrice = null;
+                this.selectedVariantStock = {{ $product->stock }};
+                this.selectedVariantSku = '{{ $product->sku }}';
+                this.activeImagesList = this.productImages;
+                this.activeImage = this.productImages[0] ?? '';
+            }
+        }
+    }">
         <!-- Gallery -->
-        <div class="space-y-4" x-data="{ activeImage: '{{ $product->images[0] ?? '' }}' }">
+        <div class="space-y-4">
             <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
                 <img :src="activeImage" alt="{{ $product->name }}" class="h-full w-full object-cover transition-all duration-300">
             </div>
             
             <!-- Sub-images thumbnails if any -->
-            @if(count($product->images) > 1)
-                <div class="grid grid-cols-5 gap-3">
-                    @foreach($product->images as $img)
-                        <div 
-                            @click="activeImage = '{{ $img }}'"
-                            :class="activeImage === '{{ $img }}' ? 'border-indigo-600 ring-2 ring-indigo-500/20' : 'border-slate-200'"
-                            class="aspect-square bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-600 transition duration-150"
-                        >
-                            <img src="{{ $img }}" alt="Product Image Thumbnail" class="h-full w-full object-cover">
-                        </div>
-                    @endforeach
-                </div>
-            @endif
+            <div class="grid grid-cols-5 gap-3" x-show="activeImagesList.length > 1">
+                <template x-for="(img, idx) in activeImagesList" :key="idx">
+                    <div 
+                        @click="activeImage = img"
+                        :class="activeImage === img ? 'border-indigo-600 ring-2 ring-indigo-500/20' : 'border-slate-200'"
+                        class="aspect-square bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-600 transition duration-150"
+                    >
+                        <img :src="img" alt="Product Image Thumbnail" class="h-full w-full object-cover">
+                    </div>
+                </template>
+            </div>
         </div>
 
         <!-- Purchase Panel -->
@@ -154,12 +218,19 @@ new class extends Component
 
                 <!-- Pricing -->
                 <div class="flex items-baseline gap-3 mb-6">
-                    @if($product->sale_price)
-                        <span class="text-3xl font-extrabold text-slate-900">₹{{ number_format($product->sale_price) }}</span>
-                        <span class="text-sm text-slate-400 line-through">₹{{ number_format($product->price) }}</span>
-                    @else
-                        <span class="text-3xl font-extrabold text-slate-900">₹{{ number_format($product->price) }}</span>
-                    @endif
+                    <template x-if="selectedVariantPrice !== null">
+                        <span class="text-3xl font-extrabold text-slate-900" x-text="'₹' + Number(selectedVariantPrice).toLocaleString()"></span>
+                    </template>
+                    <template x-if="selectedVariantPrice === null">
+                        <div class="flex items-baseline gap-3">
+                            @if($product->sale_price)
+                                <span class="text-3xl font-extrabold text-slate-900">₹{{ number_format($product->sale_price) }}</span>
+                                <span class="text-sm text-slate-400 line-through">₹{{ number_format($product->price) }}</span>
+                            @else
+                                <span class="text-3xl font-extrabold text-slate-900">₹{{ number_format($product->price) }}</span>
+                            @endif
+                        </div>
+                    </template>
                 </div>
 
                 <p class="text-slate-600 text-sm leading-relaxed mb-6">{{ $product->short_description }}</p>
@@ -183,7 +254,6 @@ new class extends Component
                                     {{ $product->brand?->name ?? 'N/A' }}
                                 </p>
                             </div>
-                            
                         @endisset
 
                         <!-- Category -->
@@ -206,39 +276,45 @@ new class extends Component
                                     SKU
                                 </p>
 
-                                <p class="mt-1 text-sm font-semibold text-slate-900">
+                                <p class="mt-1 text-sm font-semibold text-slate-900" x-text="selectedVariantSku">
                                     {{ $product->sku }}
                                 </p>
                             </div>
                         @endisset
+
                         <!-- Stock -->
                         <div>
                             <p class="text-xs uppercase tracking-wider text-slate-400">
                                 Availability
                             </p>
 
-                            @if($product->stock > 0)
-
-                                <div class="mt-1 flex items-center gap-2">
-
-                                    <span class="text-sm font-semibold text-emerald-600">
-                                        In Stock ({{ $product->stock }})
-                                    </span>
-
-                                </div>
-
-                            @else
-
-                                <div class="mt-1 flex items-center gap-2">
-
-                                    <span class="text-sm font-semibold text-red-600">
-                                        Out of Stock
-                                    </span>
-                                </div>
-                            @endif
+                            <div class="mt-1 flex items-center gap-2">
+                                <span class="text-sm font-semibold text-emerald-600" x-show="selectedVariantStock > 0" x-text="'In Stock (' + selectedVariantStock + ')'"></span>
+                                <span class="text-sm font-semibold text-red-600" x-show="selectedVariantStock <= 0" style="display: none;">Out of Stock</span>
+                            </div>
                         </div>
                     </div>
                 </div>
+
+                <!-- Variant Selectors -->
+                @if($product->variants->count() > 0)
+                    <div class="mt-6 space-y-3">
+                        <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider">Select Options</label>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($product->variants as $var)
+                                <button 
+                                    type="button"
+                                    @click="selectVariant({{ $var->id }})"
+                                    :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                    class="px-4 py-2.5 text-xs font-semibold border rounded-xl shadow-sm transition duration-150"
+                                >
+                                    {{ $var->name }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <div class="mt-6 grid grid-cols-2 gap-3">
 
                     <div class="flex items-center gap-3 rounded-xl border border-slate-200 p-3">
@@ -264,32 +340,31 @@ new class extends Component
                     </div>
 
                 </div>
-                <!-- Cart Control -->
-                @if($product->stock > 0)
-                    <div class="space-y-4 pt-6 border-t border-slate-200">
-                        <div class="flex items-center gap-4">
-                            <div class="flex items-center border border-slate-200 bg-slate-50 rounded-xl overflow-hidden h-12">
-                                <button wire:click="decrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
-                                    -
-                                </button>
-                                <span class="px-2 font-bold text-slate-800 text-sm w-8 text-center">{{ $quantity }}</span>
-                                <button wire:click="incrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
-                                    +
-                                </button>
-                            </div>
 
-                            <button 
-                                wire:click="addToCart"
-                                class="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 h-12 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition flex items-center justify-center gap-2"
-                            >
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                </svg>
-                                Add to Cart
+                <!-- Cart Control -->
+                <div class="space-y-4 pt-6 border-t border-slate-200 mt-6" x-show="selectedVariantStock > 0">
+                    <div class="flex items-center gap-4">
+                        <div class="flex items-center border border-slate-200 bg-slate-50 rounded-xl overflow-hidden h-12">
+                            <button wire:click="decrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
+                                -
+                            </button>
+                            <span class="px-2 font-bold text-slate-800 text-sm w-8 text-center">{{ $quantity }}</span>
+                            <button wire:click="incrementQuantity" class="px-4 text-slate-500 hover:text-slate-900 transition">
+                                +
                             </button>
                         </div>
+
+                        <button 
+                            wire:click="addToCart"
+                            class="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 h-12 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition flex items-center justify-center gap-2"
+                        >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                            Add to Cart
+                        </button>
                     </div>
-                @endif
+                </div>
             </div>
         </div>
     </div>

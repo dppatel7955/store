@@ -31,27 +31,27 @@ new class extends Component
         $this->subtotal = CartService::getSubtotal();
     }
 
-    public function increaseQuantity($productId)
+    public function increaseQuantity(string $cartKey)
     {
-        if (isset($this->cart[$productId])) {
-            $qty = $this->cart[$productId]['quantity'] + 1;
-            CartService::update($productId, $qty);
+        if (isset($this->cart[$cartKey])) {
+            $qty = $this->cart[$cartKey]['quantity'] + 1;
+            CartService::update($cartKey, $qty);
             $this->dispatch('cart-updated');
         }
     }
 
-    public function decreaseQuantity($productId)
+    public function decreaseQuantity(string $cartKey)
     {
-        if (isset($this->cart[$productId])) {
-            $qty = $this->cart[$productId]['quantity'] - 1;
-            CartService::update($productId, $qty);
+        if (isset($this->cart[$cartKey])) {
+            $qty = $this->cart[$cartKey]['quantity'] - 1;
+            CartService::update($cartKey, $qty);
             $this->dispatch('cart-updated');
         }
     }
 
-    public function removeItem($productId)
+    public function removeItem(string $cartKey)
     {
-        CartService::remove($productId);
+        CartService::remove($cartKey);
         $this->dispatch('cart-updated');
     }
 
@@ -105,7 +105,7 @@ new class extends Component
              <div class="flex-1 overflow-y-auto py-6 px-4 sm:px-6">
                  @if(count($cart) > 0)
                      <div class="space-y-6">
-                          @foreach($cart as $item)
+                          @foreach($cart as $key => $item)
                               <div class="flex gap-4 bg-slate-50/70 p-3 rounded-xl border border-slate-200/60">
                                   <!-- Thumbnail -->
                                   <div class="h-20 w-20 flex-shrink-0 overflow-hidden rounded-lg bg-white border border-slate-200">
@@ -122,26 +122,29 @@ new class extends Component
                                               <span class="text-xs font-extrabold text-slate-900 whitespace-nowrap">₹{{ number_format($item['total']) }}</span>
                                           </div>
                                           <p class="text-[10px] text-slate-450 mt-0.5">Price: ₹{{ number_format($item['price']) }}</p>
+                                          @if(!empty($item['variant_name']))
+                                              <p class="text-[10px] text-indigo-600 font-medium mt-0.5">Variant: {{ $item['variant_name'] }}</p>
+                                          @endif
                                       </div>
 
                                       <!-- Quantity & Remove -->
                                       <div class="flex items-center justify-between mt-3">
                                           <!-- Quantity selector -->
                                           <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
-                                              <button wire:click="decreaseQuantity({{ $item['id'] }})" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
+                                              <button wire:click="decreaseQuantity('{{ $key }}')" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
                                                   <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4" />
                                                   </svg>
                                               </button>
                                               <span class="text-xs font-bold text-slate-800 px-1 min-w-[16px] text-center">{{ $item['quantity'] }}</span>
-                                              <button wire:click="increaseQuantity({{ $item['id'] }})" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
+                                              <button wire:click="increaseQuantity('{{ $key }}')" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
                                                   <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                                                   </svg>
                                               </button>
                                           </div>
                                           
-                                          <button wire:click="removeItem({{ $item['id'] }})" class="text-[10px] font-bold text-rose-600 hover:text-rose-700 transition">
+                                          <button wire:click="removeItem('{{ $key }}')" class="text-[10px] font-bold text-rose-600 hover:text-rose-700 transition">
                                               Remove
                                           </button>
                                       </div>

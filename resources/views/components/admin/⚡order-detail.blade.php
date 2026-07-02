@@ -93,10 +93,17 @@ new class extends Component
                                     <!-- Image & Name -->
                                     <td class="py-3">
                                         <div class="flex items-center gap-3">
-                                            @if($item->product && is_array($item->product->images))
+                                            @if(!empty($item->variant?->images) && is_array($item->variant->images))
+                                                <img src="{{ $item->variant->images[0] }}" class="h-8 w-8 object-cover rounded border border-slate-200 flex-shrink-0">
+                                            @elseif($item->product && is_array($item->product->images))
                                                 <img src="{{ $item->product->images[0] ?? '' }}" class="h-8 w-8 object-cover rounded border border-slate-200 flex-shrink-0">
                                             @endif
-                                            <span class="font-bold text-slate-800">{{ $item->product->name ?? 'Deleted Product' }}</span>
+                                            <div>
+                                                <div class="font-bold text-slate-800">{{ $item->product->name ?? 'Deleted Product' }}</div>
+                                                @if(!empty($item->variant_name))
+                                                    <div class="text-[10px] text-indigo-600 font-medium">Variant: {{ $item->variant_name }}</div>
+                                                @endif
+                                            </div>
                                         </div>
                                     </td>
                                     <!-- SKU -->

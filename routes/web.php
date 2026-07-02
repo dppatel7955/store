@@ -78,6 +78,12 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/products', function () {
         return view('pages.admin.products');
     })->name('admin.products');
+    Route::get('/admin/products/create', function () {
+        return view('pages.admin.products-create');
+    })->name('admin.products.create');
+    Route::get('/admin/products/{id}/edit', function ($id) {
+        return view('pages.admin.products-edit', compact('id'));
+    })->name('admin.products.edit');
     Route::get('/admin/orders', function () {
         return view('pages.admin.orders');
     })->name('admin.orders');

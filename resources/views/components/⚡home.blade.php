@@ -28,14 +28,14 @@ new class extends Component
         $this->featuredProducts = Product::with('brand')
             ->where('is_active', true)
             ->where('is_featured', true)
-            ->select(['id', 'name', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+            ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
             ->limit(4)
             ->get();
 
         // Fetch newest arrivals
         $this->newArrivals = Product::with('brand')
             ->where('is_active', true)
-            ->select(['id', 'name', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+            ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
             ->orderBy('created_at', 'desc')
             ->limit(4)
             ->get();
@@ -179,44 +179,50 @@ new class extends Component
             <div x-ref="newArrivalsSlider" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-x-visible sm:pb-0 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @foreach($newArrivals as $prod)
                     <div class="group relative bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-lg transition duration-300 flex flex-col h-full snap-start shrink-0 w-[210px] sm:w-auto">
-                        <!-- Image -->
-                        <div class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100">
-                            <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
-                            @if($prod->sale_price)
-                                <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full">
-                                    Sale
-                                </span>
-                            @endif
-                        </div>
-                        <!-- Details -->
-                        <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
-                            <div>
-                                <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name ?? '' }}</span>
-                                <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1">
-                                    {{ $prod->name }}
-                                </h3>
-                                <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ $prod->short_description }}</p>
+                        <!-- Product Link Wrapper (wraps image and text details) -->
+                        <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
+                            <!-- Image -->
+                            <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
+                                <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
+                                @if($prod->sale_price)
+                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full">
+                                        Sale
+                                    </span>
+                                @endif
                             </div>
-                            <div class="mt-3 sm:mt-4">
-                                <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-                                    @if($prod->sale_price)
-                                        <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                        <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
-                                    @else
-                                        <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
-                                    @endif
+                            <!-- Details -->
+                            <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name ?? '' }}</span>
+                                    <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 group-hover:text-indigo-650 transition">
+                                        {{ $prod->name }}
+                                    </h3>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ $prod->short_description }}</p>
                                 </div>
-                                
-                                <button 
-                                    wire:click="addToCart({{ $prod->id }})"
-                                    class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
-                                >
-                                    <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                    Add to Cart
-                                </button>
+                                <div class="mt-3 sm:mt-4">
+                                    <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                                        @if($prod->sale_price)
+                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
+                                            <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                        @else
+                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
+                        </a>
+                        
+                        <!-- Add to Cart -->
+                        <div class="px-3.5 pb-3.5 sm:px-5 sm:pb-5">
+                            <button 
+                                wire:click="addToCart({{ $prod->id }})"
+                                class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
+                            >
+                                <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Add to Cart
+                            </button>
                         </div>
                     </div>
                 @endforeach
@@ -346,44 +352,50 @@ new class extends Component
             <div x-ref="featuredSlider" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-x-visible sm:pb-0 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
                 @foreach($featuredProducts as $prod)
                     <div class="group relative bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-lg transition duration-300 flex flex-col h-full snap-start shrink-0 w-[210px] sm:w-auto">
-                        <!-- Image -->
-                        <div class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100">
-                            <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
-                            @if($prod->sale_price)
-                                <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full">
-                                    Sale
-                                </span>
-                            @endif
-                        </div>
-                        <!-- Details -->
-                        <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
-                            <div>
-                                <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name }}</span>
-                                <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1">
-                                    {{ $prod->name }}
-                                </h3>
-                                <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ $prod->short_description }}</p>
+                        <!-- Product Link Wrapper (wraps image and text details) -->
+                        <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
+                            <!-- Image -->
+                            <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
+                                <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
+                                @if($prod->sale_price)
+                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full">
+                                        Sale
+                                    </span>
+                                @endif
                             </div>
-                            <div class="mt-3 sm:mt-4">
-                                <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-                                    @if($prod->sale_price)
-                                        <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                        <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
-                                    @else
-                                        <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
-                                    @endif
+                            <!-- Details -->
+                            <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
+                                <div>
+                                    <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name }}</span>
+                                    <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 group-hover:text-indigo-650 transition">
+                                        {{ $prod->name }}
+                                    </h3>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ $prod->short_description }}</p>
                                 </div>
-                                
-                                <button 
-                                    wire:click="addToCart({{ $prod->id }})"
-                                    class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
-                                >
-                                    <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                    </svg>
-                                    Add to Cart
-                                </button>
+                                <div class="mt-3 sm:mt-4">
+                                    <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                                        @if($prod->sale_price)
+                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
+                                            <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                        @else
+                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
+                                        @endif
+                                    </div>
+                                </div>
                             </div>
+                        </a>
+                        
+                        <!-- Add to Cart -->
+                        <div class="px-3.5 pb-3.5 sm:px-5 sm:pb-5">
+                            <button 
+                                wire:click="addToCart({{ $prod->id }})"
+                                class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
+                            >
+                                <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                </svg>
+                                Add to Cart
+                            </button>
                         </div>
                     </div>
                 @endforeach

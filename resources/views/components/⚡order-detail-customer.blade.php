@@ -115,11 +115,18 @@ new class extends Component
                         <div class="flex items-center justify-between py-4">
                             <div class="flex items-center gap-3.5">
                                 <div class="h-12 w-12 rounded-lg bg-slate-50 overflow-hidden border border-slate-200 flex-shrink-0">
-                                    <img src="{{ is_array($item->product->images) ? ($item->product->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop') : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $item->product->name ?? 'Product Image' }}" class="h-full w-full object-cover">
+                                    @if(!empty($item->variant?->images) && is_array($item->variant->images))
+                                        <img src="{{ $item->variant->images[0] }}" alt="Variant Image" class="h-full w-full object-cover">
+                                    @else
+                                        <img src="{{ ($item->product && is_array($item->product->images)) ? ($item->product->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop') : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $item->product->name ?? 'Product Image' }}" class="h-full w-full object-cover">
+                                    @endif
                                 </div>
                                 <div>
                                     <h4 class="text-sm font-bold text-slate-800 leading-snug line-clamp-1">{{ $item->product->name ?? 'Deleted Item' }}</h4>
-                                    <span class="text-[10px] text-slate-500 font-medium">SKU: {{ $item->product->sku ?? '-' }} &bull; Qty: {{ $item->quantity }}</span>
+                                    @if(!empty($item->variant_name))
+                                        <div class="text-[10px] text-indigo-600 font-medium">Variant: {{ $item->variant_name }}</div>
+                                    @endif
+                                    <span class="text-[10px] text-slate-500 font-medium">SKU: {{ $item->variant?->sku ?: ($item->product->sku ?? '-') }} &bull; Qty: {{ $item->quantity }}</span>
                                 </div>
                             </div>
                             <div class="text-right">

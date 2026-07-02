@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\Models\Product;
+use App\Models\ProductVariant;
 
 class CartService
 {
@@ -11,7 +12,7 @@ class CartService
         return session()->get('cart', []);
     }
 
-    public static function add(int $productId, int $quantity = 1): void
+    public static function add(int $productId, int $quantity = 1, ?int $variantId = null): void
     {
         $cart = self::get();
         $product = Product::find($productId);
@@ -21,17 +22,32 @@ class CartService
         }
 
         $price = $product->sale_price ?? $product->price;
+        $variantName = null;
+        $variantImage = null;
 
-        if (isset($cart[$productId])) {
-            $cart[$productId]['quantity'] += $quantity;
-            $cart[$productId]['total'] = $cart[$productId]['quantity'] * $price;
+        if ($variantId) {
+            $variant = ProductVariant::find($variantId);
+            if ($variant) {
+                $price = $variant->price ?: $price;
+                $variantName = $variant->name;
+                $variantImage = (is_array($variant->images) && count($variant->images) > 0) ? $variant->images[0] : null;
+            }
+        }
+
+        $cartKey = $variantId ? "{$productId}-{$variantId}" : (string)$productId;
+
+        if (isset($cart[$cartKey])) {
+            $cart[$cartKey]['quantity'] += $quantity;
+            $cart[$cartKey]['total'] = $cart[$cartKey]['quantity'] * $price;
         } else {
-            $cart[$productId] = [
+            $cart[$cartKey] = [
                 'id' => $productId,
+                'variant_id' => $variantId,
+                'variant_name' => $variantName,
                 'name' => $product->name,
                 'slug' => $product->slug,
                 'price' => (float)$price,
-                'image' => $product->images[0] ?? null,
+                'image' => $variantImage ?? ($product->images[0] ?? null),
                 'quantity' => $quantity,
                 'total' => (float)($price * $quantity)
             ];
@@ -40,25 +56,25 @@ class CartService
         session()->put('cart', $cart);
     }
 
-    public static function update(int $productId, int $quantity): void
+    public static function update(string $cartKey, int $quantity): void
     {
         $cart = self::get();
-        if (isset($cart[$productId])) {
+        if (isset($cart[$cartKey])) {
             if ($quantity <= 0) {
-                unset($cart[$productId]);
+                unset($cart[$cartKey]);
             } else {
-                $cart[$productId]['quantity'] = $quantity;
-                $cart[$productId]['total'] = $quantity * $cart[$productId]['price'];
+                $cart[$cartKey]['quantity'] = $quantity;
+                $cart[$cartKey]['total'] = $quantity * $cart[$cartKey]['price'];
             }
             session()->put('cart', $cart);
         }
     }
 
-    public static function remove(int $productId): void
+    public static function remove(string $cartKey): void
     {
         $cart = self::get();
-        if (isset($cart[$productId])) {
-            unset($cart[$productId]);
+        if (isset($cart[$cartKey])) {
+            unset($cart[$cartKey]);
             session()->put('cart', $cart);
         }
     }

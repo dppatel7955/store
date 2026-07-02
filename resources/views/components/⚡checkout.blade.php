@@ -117,15 +117,25 @@ new class extends Component
             OrderItem::create([
                 'order_id' => $order->id,
                 'product_id' => $item['id'],
+                'variant_id' => $item['variant_id'] ?? null,
+                'variant_name' => $item['variant_name'] ?? null,
                 'quantity' => $item['quantity'],
                 'unit_amount' => $item['price'],
                 'total_amount' => $item['total'],
             ]);
 
-            $product = Product::find($item['id']);
-            if ($product) {
-                $product->stock = max(0, $product->stock - $item['quantity']);
-                $product->save();
+            if (!empty($item['variant_id'])) {
+                $variant = \App\Models\ProductVariant::find($item['variant_id']);
+                if ($variant) {
+                    $variant->stock = max(0, $variant->stock - $item['quantity']);
+                    $variant->save();
+                }
+            } else {
+                $product = Product::find($item['id']);
+                if ($product) {
+                    $product->stock = max(0, $product->stock - $item['quantity']);
+                    $product->save();
+                }
             }
         }
 
