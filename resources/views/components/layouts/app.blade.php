@@ -148,27 +148,16 @@
 
                 </div>
             </div>
-        </div>
 
-        <!-- Mobile Menu (collapsible) -->
-        <div 
-            x-show="mobileMenuOpen" 
-            x-transition
-            class="md:hidden border-t border-slate-200 bg-white px-4 pt-2 pb-4 space-y-2 shadow-inner"
-            style="display: none;"
-        >
-            <a href="{{ route('home') }}" class="block px-3 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('/') ? 'bg-indigo-50/50 text-indigo-650' : '' }}">Home</a>
-            <a href="{{ route('shop') }}" class="block px-3 py-2 rounded-xl text-sm font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('shop*') ? 'bg-indigo-50/50 text-indigo-650' : '' }}">Shop</a>
-            
-            <!-- Mobile Search Bar (under sm screen width) -->
-            <div class="px-3 py-1 sm:hidden">
+            <!-- Mobile Search Bar (Directly inside main nav header on mobile) -->
+            <div class="pb-3 block sm:hidden">
                 <form action="{{ route('shop') }}" method="GET" class="relative">
                     <input 
                         type="text" 
                         name="search" 
                         value="{{ request('search') }}"
-                        placeholder="Search products..." 
-                        class="w-full bg-slate-100 border border-slate-200 rounded-full py-1.5 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition"
+                        placeholder="Search products, brands, categories..." 
+                        class="w-full bg-slate-100 border border-slate-200 rounded-full py-1.5 pl-10 pr-4 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:bg-white focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
                     />
                     <span class="absolute left-3.5 top-2.5 text-slate-450">
                         <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
@@ -177,43 +166,139 @@
                     </span>
                 </form>
             </div>
-
-            <!-- Admin Link inside Mobile Menu -->
-            @auth
-                @if(auth()->user()->is_admin)
-                    <a href="{{ route('admin.dashboard') }}" class="block px-3 py-2 rounded-xl text-sm font-bold text-indigo-600 bg-indigo-50 hover:bg-indigo-100 transition">
-                        Admin Panel
-                    </a>
-                @endif
-            @endauth
-
-            <!-- User Menu inside Mobile Menu -->
-            @auth
-                <div class="border-t border-slate-100 pt-3 px-3">
-                    <div class="flex items-center gap-3 mb-2">
-                        <div class="h-8 w-8 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-xs font-bold shadow">
-                            {{ substr(auth()->user()->name ?? 'U', 0, 1) }}
-                        </div>
-                        <div>
-                            <div class="text-xs font-bold text-slate-800">{{ auth()->user()->name }}</div>
-                            <div class="text-[10px] text-slate-500">{{ auth()->user()->email }}</div>
-                        </div>
-                    </div>
-                    <div class="space-y-1">
-                        <a href="{{ route('orders') }}" class="block py-1.5 text-xs font-semibold text-slate-650 hover:text-slate-905">My Orders</a>
-                        <form method="POST" action="{{ route('logout') }}" class="block w-full">
-                            @csrf
-                            <button type="submit" class="block w-full text-left py-1.5 text-xs font-semibold text-rose-600 hover:text-rose-700">Sign Out</button>
-                        </form>
-                    </div>
-                </div>
-            @else
-                <div class="border-t border-slate-100 pt-3 px-3">
-                    <a href="{{ route('login') }}" class="block text-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-2 text-xs font-bold text-white shadow hover:from-indigo-650 hover:to-purple-705 transition">Sign In</a>
-                </div>
-            @endauth
         </div>
-    </header>
+
+        <!-- Mobile Left Sidebar Drawer Toggle -->
+        <div 
+            x-show="mobileMenuOpen" 
+            x-effect="document.body.classList.toggle('overflow-hidden', mobileMenuOpen)"
+            class="fixed inset-0 z-50 md:hidden" 
+            style="display: none;"
+            role="dialog" 
+            aria-modal="true"
+        >
+            <!-- Backdrop Overlay -->
+            <div 
+                x-show="mobileMenuOpen"
+                x-transition:enter="transition-opacity ease-out duration-300"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition-opacity ease-in duration-200"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="mobileMenuOpen = false"
+                class="fixed inset-0 bg-slate-900/60 backdrop-blur-sm"
+            ></div>
+
+            <!-- Drawer Panel -->
+            <div 
+                x-show="mobileMenuOpen"
+                x-transition:enter="transition ease-out duration-300 transform"
+                x-transition:enter-start="-translate-x-full"
+                x-transition:enter-end="translate-x-0"
+                x-transition:leave="transition ease-in duration-200 transform"
+                x-transition:leave-start="translate-x-0"
+                x-transition:leave-end="-translate-x-full"
+                class="fixed inset-y-0 left-0 w-full max-w-xs bg-white shadow-2xl flex flex-col justify-between z-50 border-r border-slate-200"
+            >
+                <div class="flex-grow bg-white py-6 px-5 space-y-6">
+                    <!-- Drawer Header -->
+                    <div class="flex items-center justify-between border-b border-slate-100 pb-4">
+                        <span class="text-base font-extrabold tracking-wider bg-gradient-to-r from-indigo-600 via-purple-650 to-pink-600 bg-clip-text text-transparent">
+                            SAFFRON STORE
+                        </span>
+                        <button 
+                            @click="mobileMenuOpen = false" 
+                            type="button" 
+                            class="p-1 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-slate-50 transition"
+                            aria-label="Close menu"
+                        >
+                            <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+                            </svg>
+                        </button>
+                    </div>
+
+
+
+                    <!-- Navigation Links -->
+                    <div class="space-y-1">
+                        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-2 pl-2">Navigation</span>
+                        
+                        <a href="{{ route('home') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('/') ? 'bg-indigo-50/60 text-indigo-650' : '' }}">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Home
+                        </a>
+                        <a href="{{ route('shop') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('shop*') ? 'bg-indigo-50/60 text-indigo-650' : '' }}">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                            </svg>
+                            Shop Catalog
+                        </a>
+                        <a href="{{ route('shipping-policy') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('shipping-policy') ? 'bg-indigo-50/60 text-indigo-650' : '' }}">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M9 17a2 2 0 11-4 0 2 2 0 014 0zM19 17a2 2 0 11-4 0 2 2 0 014 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16V6a1 1 0 00-1-1H4a1 1 0 00-1 1v10a1 1 0 001 1h1m8-1a1 1 0 01-1-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6" />
+                            </svg>
+                            Shipping Policy
+                        </a>
+                    </div>
+                </div>
+
+                <!-- Footer User Area inside Drawer -->
+                <div class="border-t border-slate-100 bg-white p-5 space-y-4">
+                    @auth
+                        <div class="flex items-center gap-3">
+                            <div class="h-10 w-10 rounded-full bg-gradient-to-tr from-indigo-500 to-purple-600 flex items-center justify-center text-white text-sm font-bold shadow-md">
+                                {{ substr(auth()->user()->name ?? 'U', 0, 1) }}
+                            </div>
+                            <div class="flex-grow min-w-0">
+                                <div class="text-xs font-bold text-slate-800 truncate">{{ auth()->user()->name }}</div>
+                                <div class="text-[10px] text-slate-450 truncate">{{ auth()->user()->email }}</div>
+                            </div>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-2 pt-2">
+                            @if(auth()->user()->is_admin)
+                                <a href="{{ route('admin.dashboard') }}" @click="mobileMenuOpen = false" class="flex items-center justify-center gap-2 rounded-xl bg-indigo-50 border border-indigo-250 py-2 text-xs font-bold text-indigo-700 hover:bg-indigo-100 transition">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
+                                    </svg>
+                                    Admin Dashboard
+                                </a>
+                            @endif
+
+                            <a href="{{ route('orders') }}" @click="mobileMenuOpen = false" class="flex items-center justify-center gap-2 rounded-xl bg-white border border-slate-200 py-2 text-xs font-bold text-slate-700 hover:bg-slate-50 transition shadow-sm">
+                                <svg class="h-3.5 w-3.5 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01M9 16h.01" />
+                                </svg>
+                                My Orders
+                            </a>
+
+                            <form method="POST" action="{{ route('logout') }}" class="block w-full">
+                                @csrf
+                                <button type="submit" class="w-full flex items-center justify-center gap-2 rounded-xl bg-rose-50 border border-rose-100 py-2 text-xs font-bold text-rose-600 hover:bg-rose-100 transition">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M17 16l4-4m0 0l-4-4m4 4H7m6 4v1a3 3 0 01-3 3H6a3 3 0 01-3-3V7a3 3 0 01-3-3h4a3 3 0 013 3v1" />
+                                    </svg>
+                                    Sign Out
+                                </button>
+                            </form>
+                        </div>
+                    @else
+                        <div class="space-y-2">
+                            <p class="text-[10px] text-slate-400 text-center font-medium">Log in to track orders, manage addresses, and checkout quickly.</p>
+                            <a href="{{ route('login') }}" @click="mobileMenuOpen = false" class="block text-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-650 hover:to-purple-705 transition">
+                                Sign In
+                            </a>
+                        </div>
+                    @endauth
+                </div>
+            </div>
+        </div>
+</header>
 
     <!-- Main Content -->
     <main class="flex-grow">

@@ -51,7 +51,7 @@ new class extends Component
                         this.activeSlide = (this.activeSlide + 1) % this.slides.length;
                     }, 5000); // auto-slide every 5 seconds
                 }
-            }" class="relative w-full h-[240px] sm:h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden bg-slate-100 group shadow-inner">
+            }" class="relative w-full aspect-[16/9] sm:h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden bg-slate-100 group shadow-inner">
                 <!-- Slides Wrapper -->
                 <div class="h-full w-full relative">
                     <template x-for="(slide, index) in slides" :key="index">
@@ -66,11 +66,11 @@ new class extends Component
                             <!-- Link target wrap -->
                             <template x-if="slide.url">
                                 <a :href="slide.url" class="block w-full h-full">
-                                    <img :src="slide.image_path" class="w-full h-full object-cover select-none cursor-pointer" alt="Promo banner">
+                                    <img :src="slide.image_path" class="w-full h-full object-contain sm:object-cover select-none cursor-pointer" alt="Promo banner">
                                 </a>
                             </template>
                             <template x-if="!slide.url">
-                                <img :src="slide.image_path" class="w-full h-full object-cover select-none" alt="Promo banner">
+                                <img :src="slide.image_path" class="w-full h-full object-contain sm:object-cover select-none" alt="Promo banner">
                             </template>
                         </div>
                     </template>
