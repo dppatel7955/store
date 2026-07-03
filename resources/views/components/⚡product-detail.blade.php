@@ -381,7 +381,7 @@ new class extends Component
     <!-- Long Description -->
     <section class="border-t border-slate-200 pt-8">
         <h2 class="text-xl font-bold text-slate-900 mb-4">Product Overview</h2>
-        <div class="prose prose-indigo text-slate-650 text-sm leading-relaxed">
+        <div class="trix-content text-slate-650 text-sm leading-relaxed">
             {!! $product->description !!}
         </div>
     </section>
