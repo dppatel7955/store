@@ -145,6 +145,94 @@ new class extends Component
         $category->delete();
         $this->dispatch('swal', title: 'Deleted!', text: 'Category deleted successfully.', icon: 'success');
     }
+
+    public $csvFile;
+
+    public function updatedCsvFile()
+    {
+        $this->validate([
+            'csvFile' => 'required|file|mimes:csv,txt|max:4096',
+        ]);
+
+        $filePath = $this->csvFile->getRealPath();
+        $file = fopen($filePath, 'r');
+
+        $header = fgetcsv($file);
+        if (!$header) {
+            $this->dispatch('swal', title: 'Error!', text: 'Empty or invalid CSV file.', icon: 'error');
+            return;
+        }
+
+        $header = array_map(function($h) {
+            return Str::snake(trim(strtolower($h)));
+        }, $header);
+
+        $importedCount = 0;
+
+        while (($row = fgetcsv($file)) !== false) {
+            if (count($row) < count($header)) {
+                $row = array_pad($row, count($header), '');
+            } elseif (count($row) > count($header)) {
+                $row = array_slice($row, 0, count($header));
+            }
+
+            $data = array_combine($header, $row);
+            if (!$data) continue;
+
+            $name = isset($data['name']) ? trim($data['name']) : '';
+            if (!$name) continue;
+
+            $slug = !empty($data['slug']) ? trim($data['slug']) : Str::slug($name);
+
+            Category::updateOrCreate(
+                ['slug' => $slug],
+                [
+                    'name' => $name,
+                    'description' => isset($data['description']) ? trim($data['description']) : null,
+                    'image' => !empty($data['image']) ? trim($data['image']) : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop',
+                    'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : true,
+                ]
+            );
+
+            $importedCount++;
+        }
+
+        fclose($file);
+
+        $this->dispatch('swal', title: 'Import Completed!', text: "Successfully imported {$importedCount} categories.", icon: 'success');
+        $this->resetPage();
+    }
+
+    public function exportCsv()
+    {
+        $headers = ['name', 'slug', 'description', 'image', 'is_active'];
+
+        $callback = function() use ($headers) {
+            $file = fopen('php://output', 'w');
+            fputcsv($file, $headers);
+
+            $categories = Category::latest('id')->get();
+
+            foreach ($categories as $category) {
+                fputcsv($file, [
+                    $category->name,
+                    $category->slug,
+                    $category->description,
+                    $category->image,
+                    $category->is_active ? 1 : 0
+                ]);
+            }
+
+            fclose($file);
+        };
+
+        $fileName = 'categories_export_' . now()->format('Y_m_d_His') . '.csv';
+
+        return response()->streamDownload($callback, $fileName, [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
+        ]);
+    }
 };
 ?>
 
@@ -155,12 +243,61 @@ new class extends Component
             <h1 class="text-3xl font-extrabold text-slate-900">Categories</h1>
             <p class="text-xs text-slate-500 mt-1">Manage catalog categories for your items.</p>
         </div>
-        <button 
-            wire:click="openModal()" 
-            class="w-full sm:w-auto rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition text-center"
-        >
-            Add Category
-        </button>
+        <div class="flex items-center gap-3 w-full sm:w-auto justify-end">
+            <a 
+                href="/sample_categories_import.csv" 
+                download="sample_categories_import.csv"
+                class="rounded-xl bg-white border border-slate-205 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition text-center flex items-center justify-center gap-1.5 shadow-sm"
+                title="Download Sample CSV Template"
+            >
+                <span>Sample CSV</span>
+                <svg class="h-4.5 w-4.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                </svg>
+            </a>
+            <button 
+                wire:click="exportCsv"
+                wire:loading.attr="disabled"
+                class="rounded-xl bg-white border border-slate-205 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-50 transition text-center flex items-center justify-center gap-1.5 shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
+                title="Export Categories Catalog to CSV"
+            >
+                <span wire:loading.remove wire:target="exportCsv">Export CSV</span>
+                <span wire:loading wire:target="exportCsv" class="flex items-center gap-1.5">
+                    <svg class="animate-spin h-3.5 w-3.5 text-slate-550" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Exporting...</span>
+                </span>
+                <svg wire:loading.remove wire:target="exportCsv" class="h-4.5 w-4.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 10v6m0 0l-3-3m3 3l3-3m2 8H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                </svg>
+            </button>
+            <label 
+                wire:loading.class="opacity-60 cursor-not-allowed pointer-events-none" 
+                wire:target="csvFile"
+                class="rounded-xl bg-slate-100 border border-slate-200 px-4 py-2.5 text-xs font-bold text-slate-700 hover:bg-slate-200 transition text-center cursor-pointer flex items-center justify-center gap-1.5 shadow-sm"
+            >
+                <span wire:loading.remove wire:target="csvFile">Import CSV</span>
+                <span wire:loading wire:target="csvFile" class="flex items-center gap-1.5">
+                    <svg class="animate-spin h-3.5 w-3.5 text-slate-550" fill="none" viewBox="0 0 24 24">
+                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                    </svg>
+                    <span>Importing...</span>
+                </span>
+                <input type="file" wire:model="csvFile" class="hidden" accept=".csv" wire:loading.attr="disabled" wire:target="csvFile">
+                <svg wire:loading.remove wire:target="csvFile" class="h-4.5 w-4.5 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 13h6m-3-3v6m-9 1V4a2 2 0 012-2h6l2 2h6a2 2 0 012 2v8a2 2 0 01-2 2H5a2 2 0 01-2-2z" />
+                </svg>
+            </label>
+            <button 
+                wire:click="openModal()" 
+                class="rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-4 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition text-center"
+            >
+                Add Category
+            </button>
+        </div>
     </div>
 
 
@@ -326,8 +463,12 @@ new class extends Component
                     <label class="block text-xs font-semibold text-slate-500 mb-1.5">Category Image</label>
                     <div class="flex items-center gap-4">
                         @if($imageFile)
-                            <div class="relative h-16 w-16 rounded-xl overflow-hidden border border-indigo-200 bg-slate-50 shadow-sm flex-shrink-0">
-                                <img src="{{ $imageFile->temporaryUrl() }}" class="h-full w-full object-cover">
+                            <div class="relative h-16 w-16 rounded-xl overflow-hidden border border-indigo-200 bg-slate-50 shadow-sm flex-shrink-0 bg-slate-100 flex items-center justify-center">
+                                <?php try { ?>
+                                    <img src="{{ $imageFile->temporaryUrl() }}" class="h-full w-full object-cover">
+                                <?php } catch (\Throwable $e) { ?>
+                                    <span class="text-[9px] font-bold text-slate-400 text-center leading-tight px-1">Uploaded</span>
+                                <?php } ?>
                             </div>
                         @elseif($image)
                             <div class="relative h-16 w-16 rounded-xl overflow-hidden border border-slate-200 bg-slate-50 shadow-sm flex-shrink-0">

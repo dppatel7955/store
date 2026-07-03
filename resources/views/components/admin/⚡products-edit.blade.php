@@ -407,8 +407,12 @@ new class extends Component
                                             </div>
                                             <div class="flex flex-wrap gap-2">
                                                 @foreach($tempImages[$index] as $file)
-                                                    <div class="h-10 w-10 border border-slate-200 rounded-lg overflow-hidden relative group">
-                                                        <img src="{{ $file->temporaryUrl() }}" class="h-full w-full object-cover">
+                                                    <div class="h-10 w-10 border border-slate-200 rounded-lg overflow-hidden relative group bg-slate-100 flex items-center justify-center">
+                                                        <?php try { ?>
+                                                            <img src="{{ $file->temporaryUrl() }}" class="h-full w-full object-cover">
+                                                        <?php } catch (\Throwable $e) { ?>
+                                                            <span class="text-[8px] font-bold text-slate-405 text-center leading-tight">Uploaded</span>
+                                                        <?php } ?>
                                                     </div>
                                                 @endforeach
                                             </div>

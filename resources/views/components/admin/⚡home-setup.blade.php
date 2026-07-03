@@ -198,8 +198,12 @@ new class extends Component
                         <label class="block text-xs font-semibold text-slate-500 mb-1.5">Banner Image (Required)</label>
                         <div class="space-y-3">
                             @if($newBannerImage)
-                                <div class="relative aspect-[16/9] rounded-xl overflow-hidden border border-indigo-200 bg-slate-50 shadow-sm">
-                                    <img src="{{ $newBannerImage->temporaryUrl() }}" alt="Banner preview" class="h-full w-full object-cover">
+                                <div class="relative aspect-[16/9] rounded-xl overflow-hidden border border-indigo-200 bg-slate-50 shadow-sm bg-slate-100 flex items-center justify-center">
+                                    <?php try { ?>
+                                        <img src="{{ $newBannerImage->temporaryUrl() }}" alt="Banner preview" class="h-full w-full object-cover">
+                                    <?php } catch (\Throwable $e) { ?>
+                                        <span class="text-xs font-bold text-slate-400 text-center leading-tight px-1">Uploaded</span>
+                                    <?php } ?>
                                 </div>
                             @else
                                 <label class="flex flex-col items-center justify-center w-full aspect-[16/9] border-2 border-slate-200 border-dashed rounded-xl cursor-pointer bg-slate-50 hover:bg-slate-100/50 transition">
