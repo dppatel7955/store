@@ -261,12 +261,12 @@ new class extends Component
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Short Description</label>
                     <div wire:ignore x-init="
-                        $refs.trix.addEventListener('trix-change', () => {
+                        $refs.shortTrix.addEventListener('trix-change', () => {
                             $wire.set('short_description', document.getElementById('short-desc-trix').value);
                         });
                     ">
                         <input id="short-desc-trix" type="hidden" value="{{ $short_description }}">
-                        <trix-editor x-ref="trix" input="short-desc-trix" class="trix-content min-h-[100px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 transition text-slate-850 text-xs p-3 focus:outline-none" placeholder="Brief summary displayed on listings page..."></trix-editor>
+                        <trix-editor x-ref="shortTrix" input="short-desc-trix" class="trix-content min-h-[100px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 transition text-slate-850 text-xs p-3 focus:outline-none" placeholder="Brief summary displayed on listings page..."></trix-editor>
                     </div>
                     @error('short_description') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
@@ -274,12 +274,12 @@ new class extends Component
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Long Description Overview</label>
                     <div wire:ignore x-init="
-                        $refs.trix.addEventListener('trix-change', () => {
+                        $refs.longTrix.addEventListener('trix-change', () => {
                             $wire.set('description', document.getElementById('desc-trix').value);
                         });
                     ">
                         <input id="desc-trix" type="hidden" value="{{ $description }}">
-                        <trix-editor x-ref="trix" input="desc-trix" class="trix-content min-h-[200px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 transition text-slate-850 text-xs p-3 focus:outline-none" placeholder="HTML or full text specification details..."></trix-editor>
+                        <trix-editor x-ref="longTrix" input="desc-trix" class="trix-content min-h-[200px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 transition text-slate-850 text-xs p-3 focus:outline-none" placeholder="HTML or full text specification details..."></trix-editor>
                     </div>
                     @error('description') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
