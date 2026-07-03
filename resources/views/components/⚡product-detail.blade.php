@@ -24,6 +24,10 @@ new class extends Component
                 $q->where('is_active', true);
             }])
             ->firstOrFail();
+
+        if ($this->product->variants->isNotEmpty()) {
+            $this->selectedVariantId = $this->product->variants->first()->id;
+        }
             
         $this->relatedProducts = Product::where('category_id', $this->product->category_id)
             ->where('id', '!=', $this->product->id)
@@ -145,6 +149,11 @@ new class extends Component
         selectedVariantPrice: null,
         selectedVariantStock: {{ $product->stock }},
         selectedVariantSku: '{{ $product->sku }}',
+        init() {
+            if (this.selectedVariantId) {
+                this.selectVariant(this.selectedVariantId);
+            }
+        },
         selectVariant(variantId) {
             this.selectedVariantId = variantId;
             let variant = this.variants.find(v => v.id == variantId);

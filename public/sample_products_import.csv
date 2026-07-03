@@ -1,0 +1,6 @@
+name,slug,sku,price,sale_price,stock,images,category,brand,short_description,description,is_active,is_featured,variant_name,variant_sku,variant_price,variant_stock,variant_images
+"Intel Core i9-14900K",intel-core-i9-14900k,SKU-I914900K,55000.00,52000.00,50,"https://images.unsplash.com/photo-1591453089816-0fbb971b454c?q=80&w=600",Processors,Intel,"Flagship 14th Gen Intel Core desktop processor.","Detailed specification description of Intel Core i9-14900K desktop CPU.",1,1,,,0,
+,,,,,,,,,,,,,Boxed Edition,SKU-I914900K-BOX,,30,
+,,,,,,,,,,,,,Tray Edition (Bulk),SKU-I914900K-TRAY,51000.00,20,
+"AMD Ryzen 7 7800X3D",amd-ryzen-7-7800x3d,SKU-R77800X3D,38000.00,,30,"https://images.unsplash.com/photo-1591453089816-0fbb971b454c?q=80&w=600",Processors,AMD,"Best gaming processor with 3D V-Cache technology.","AMD Ryzen 7 7800X3D gaming processor details.",1,1,,,0,
+,,,,,,,,,,,,,Standard Pack,SKU-R77800X3D-STD,,30,
