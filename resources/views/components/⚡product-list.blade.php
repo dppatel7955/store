@@ -61,7 +61,7 @@ new class extends Component
     #[Computed]
     public function products()
     {
-        $query = Product::where('is_active', true);
+        $query = Product::with('brand')->where('is_active', true);
 
         if (!empty($this->search)) {
             $query->where(function ($q) {
