@@ -260,13 +260,25 @@ new class extends Component
                 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Short Description</label>
-                    <textarea wire:model="short_description" rows="2" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600 transition" placeholder="Brief summary displayed on listings page..."></textarea>
+                    <div wire:ignore x-data="{ value: @entangle('short_description') }" x-init="
+                        $refs.trix.editor.loadHTML(value || '');
+                        $refs.trix.addEventListener('trix-change', () => value = $refs.trix.value)
+                    ">
+                        <input id="short-desc-trix" type="hidden">
+                        <trix-editor ref="trix" input="short-desc-trix" class="trix-content min-h-[100px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 transition text-slate-850 text-xs p-3 focus:outline-none" placeholder="Brief summary displayed on listings page..."></trix-editor>
+                    </div>
                     @error('short_description') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
                 <div>
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Long Description Overview</label>
-                    <textarea wire:model="description" rows="5" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600 transition" placeholder="HTML or full text specification details..."></textarea>
+                    <div wire:ignore x-data="{ value: @entangle('description') }" x-init="
+                        $refs.trix.editor.loadHTML(value || '');
+                        $refs.trix.addEventListener('trix-change', () => value = $refs.trix.value)
+                    ">
+                        <input id="desc-trix" type="hidden">
+                        <trix-editor ref="trix" input="desc-trix" class="trix-content min-h-[200px] border border-slate-200 rounded-xl bg-slate-50 focus:bg-white focus:border-indigo-600 transition text-slate-850 text-xs p-3 focus:outline-none" placeholder="HTML or full text specification details..."></trix-editor>
+                    </div>
                     @error('description') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
             </div>

@@ -242,7 +242,7 @@ new class extends Component
                     </template>
                 </div>
 
-                <p class="text-slate-600 text-sm leading-relaxed mb-6">{{ $product->short_description }}</p>
+                <div class="text-slate-600 text-sm leading-relaxed mb-6 trix-content">{!! $product->short_description !!}</div>
                 
                 <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
 
