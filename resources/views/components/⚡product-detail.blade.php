@@ -149,6 +149,7 @@ new class extends Component
         selectedVariantPrice: null,
         selectedVariantStock: {{ $product->stock }},
         selectedVariantSku: '{{ $product->sku }}',
+        lightboxOpen: false,
         init() {
             if (this.selectedVariantId) {
                 this.selectVariant(this.selectedVariantId);
@@ -180,8 +181,21 @@ new class extends Component
     }">
         <!-- Gallery -->
         <div class="space-y-4">
-            <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm">
-                <img :src="activeImage" alt="{{ $product->name }}" class="h-full w-full object-cover transition-all duration-300">
+            <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative cursor-zoom-in"
+                 x-data="{ zoom: false, x: 50, y: 50 }"
+                 @click="lightboxOpen = true"
+                 @mouseenter="zoom = true"
+                 @mouseleave="zoom = false; x = 50; y = 50"
+                 @mousemove="
+                     const rect = $el.getBoundingClientRect();
+                     x = (($event.clientX - rect.left) / rect.width) * 100;
+                     y = (($event.clientY - rect.top) / rect.height) * 100;
+                 "
+            >
+                <img :src="activeImage" alt="{{ $product->name }}" 
+                     class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
+                     :style="zoom ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
+                >
             </div>
             
             <!-- Sub-images thumbnails if any -->
@@ -195,6 +209,46 @@ new class extends Component
                         <img :src="img" alt="Product Image Thumbnail" class="h-full w-full object-cover">
                     </div>
                 </template>
+            </div>
+        </div>
+
+        <!-- Lightbox Modal -->
+        <div x-show="lightboxOpen" 
+             x-transition:enter="transition ease-out duration-350"
+             x-transition:enter-start="opacity-0 scale-95"
+             x-transition:enter-end="opacity-100 scale-100"
+             x-transition:leave="transition ease-in duration-200"
+             x-transition:leave-start="opacity-100 scale-100"
+             x-transition:leave-end="opacity-0 scale-95"
+             class="fixed inset-0 z-55 flex flex-col items-center justify-center bg-slate-950/95 p-4 md:p-10"
+             style="display: none;"
+             @keydown.escape.window="lightboxOpen = false"
+        >
+            <!-- Close button -->
+            <button @click="lightboxOpen = false" class="absolute top-4 right-4 md:top-8 md:right-8 text-white/70 hover:text-white bg-white/10 hover:bg-white/20 p-3 rounded-full transition z-55 shadow-lg">
+                <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
+                </svg>
+            </button>
+
+            <div class="max-w-4xl w-full flex flex-col items-center justify-center space-y-6">
+                <!-- Large Image -->
+                <div class="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-2xl relative select-none">
+                    <img :src="activeImage" alt="Zoomed view" class="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl">
+                </div>
+
+                <!-- Thumbnail Navigator inside Lightbox -->
+                <div class="flex justify-center gap-3 overflow-x-auto max-w-full py-2 px-4" x-show="activeImagesList.length > 1">
+                    <template x-for="(img, idx) in activeImagesList" :key="idx">
+                        <div 
+                            @click="activeImage = img"
+                            :class="activeImage === img ? 'border-indigo-500 ring-2 ring-indigo-500/50' : 'border-white/20'"
+                            class="h-14 w-14 bg-slate-900 border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-450 transition flex-shrink-0"
+                        >
+                            <img :src="img" alt="Thumbnail" class="h-full w-full object-cover">
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
