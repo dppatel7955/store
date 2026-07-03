@@ -261,7 +261,7 @@ new class extends Component
                                     <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 hover:text-indigo-600 transition">
                                         <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}">{{ $prod->name }}</a>
                                     </h3>
-                                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ $prod->short_description }}</p>
+                                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ strip_tags($prod->short_description) }}</p>
                                 </div>
                                 <div class="mt-3 sm:mt-4">
                                     <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
