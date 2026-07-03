@@ -8,7 +8,7 @@
     @php
         $slug = request()->route('slug');
         $seoTitle = $title ?? match(true) {
-            request()->is('shop/*') && $slug => 'Saffron Store - ' . ucwords(str_replace('-', ' ', $slug)),
+            request()->is('shop/*') && $slug => ucwords(str_replace('-', ' ', $slug)),
             request()->is('shop') => 'Shop Premium Hardware Components - Saffron Store',
             request()->is('checkout') => 'Checkout - Saffron Store',
             request()->is('orders*') => 'My Orders - Saffron Store',
