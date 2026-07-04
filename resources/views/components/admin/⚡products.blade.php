@@ -78,7 +78,34 @@ new class extends Component
 
     public function delete($id)
     {
-        $product = Product::findOrFail($id);
+        $product = Product::with('variants')->findOrFail($id);
+        
+        // Delete main images
+        if (is_array($product->images)) {
+            foreach ($product->images as $img) {
+                if ($img && !str_starts_with($img, 'http')) {
+                    $path = public_path(ltrim($img, '/'));
+                    if (file_exists($path)) {
+                        @unlink($path);
+                    }
+                }
+            }
+        }
+
+        // Delete variant images
+        foreach ($product->variants as $variant) {
+            if (is_array($variant->images)) {
+                foreach ($variant->images as $img) {
+                    if ($img && !str_starts_with($img, 'http')) {
+                        $path = public_path(ltrim($img, '/'));
+                        if (file_exists($path)) {
+                            @unlink($path);
+                        }
+                    }
+                }
+            }
+        }
+
         $product->delete();
         $this->dispatch('swal', title: 'Deleted!', text: 'Product deleted successfully.', icon: 'success');
     }
@@ -86,217 +113,28 @@ new class extends Component
     public function updatedCsvFile()
     {
         $this->validate([
-            'csvFile' => 'required|file|mimes:csv,txt|max:4096',
+            'csvFile' => 'required|file|mimes:csv,txt,xlsx,xls|max:4096',
         ]);
 
-        $filePath = $this->csvFile->getRealPath();
-        $file = fopen($filePath, 'r');
+        try {
+            $import = new \App\Imports\ProductsImport;
+            \Excel::import($import, $this->csvFile->getRealPath());
 
-        $header = fgetcsv($file);
-        if (!$header) {
-            $this->dispatch('swal', title: 'Error!', text: 'Empty or invalid CSV file.', icon: 'error');
-            return;
+            $this->dispatch('swal', 
+                title: 'Import Completed!', 
+                text: "Successfully imported {$import->getImportedProductsCount()} products and {$import->getImportedVariantsCount()} variations.", 
+                icon: 'success'
+            );
+        } catch (\Exception $e) {
+            $this->dispatch('swal', title: 'Import Failed!', text: $e->getMessage(), icon: 'error');
         }
-
-        // Clean headers (trim spaces and convert to snake_case)
-        $header = array_map(function($h) {
-            return Str::snake(trim(strtolower($h)));
-        }, $header);
-
-        $importedProductsCount = 0;
-        $importedVariantsCount = 0;
-
-        $lastProduct = null;
-
-        while (($row = fgetcsv($file)) !== false) {
-            // Pad row if it has fewer fields than the header
-            if (count($row) < count($header)) {
-                $row = array_pad($row, count($header), '');
-            } elseif (count($row) > count($header)) {
-                $row = array_slice($row, 0, count($header));
-            }
-
-            $data = array_combine($header, $row);
-            if (!$data) continue;
-
-            $productName = isset($data['name']) ? trim($data['name']) : '';
-            $productSku = isset($data['sku']) ? trim($data['sku']) : '';
-
-            $product = null;
-            if ($productName) {
-                // Find or create category
-                $categoryName = isset($data['category']) ? trim($data['category']) : 'Uncategorized';
-                $category = Category::firstOrCreate(
-                    ['name' => $categoryName],
-                    ['slug' => Str::slug($categoryName)]
-                );
-
-                // Find or create brand
-                $brand = null;
-                if (!empty($data['brand'])) {
-                    $brandName = trim($data['brand']);
-                    $brand = Brand::firstOrCreate(
-                        ['name' => $brandName],
-                        ['slug' => Str::slug($brandName)]
-                    );
-                }
-
-                // Process images list
-                $images = [];
-                if (!empty($data['images'])) {
-                    $images = array_map('trim', explode(',', $data['images']));
-                } else {
-                    $images = ['https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop'];
-                }
-
-                // Generate SKU if empty
-                if (!$productSku) {
-                    do {
-                        $productSku = 'SKU-' . strtoupper(Str::random(8));
-                    } while (Product::whereSku($productSku)->exists());
-                }
-
-                $slug = !empty($data['slug']) ? trim($data['slug']) : Str::slug($productName);
-
-                // Update or Create Product
-                $product = Product::updateOrCreate(
-                    ['sku' => $productSku],
-                    [
-                        'name' => $productName,
-                        'slug' => $slug,
-                        'price' => isset($data['price']) ? (float)$data['price'] : 0.00,
-                        'sale_price' => (!empty($data['sale_price']) && is_numeric($data['sale_price'])) ? (float)$data['sale_price'] : null,
-                        'stock' => isset($data['stock']) ? (int)$data['stock'] : 0,
-                        'images' => $images,
-                        'description' => isset($data['description']) ? trim($data['description']) : null,
-                        'short_description' => isset($data['short_description']) ? trim($data['short_description']) : null,
-                        'category_id' => $category->id,
-                        'brand_id' => $brand ? $brand->id : null,
-                        'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : true,
-                        'is_featured' => isset($data['is_featured']) ? (bool)$data['is_featured'] : false,
-                    ]
-                );
-
-                $lastProduct = $product;
-                $importedProductsCount++;
-            } else {
-                $product = $lastProduct;
-            }
-
-            // Process variation (if variant_name is present)
-            $variantName = isset($data['variant_name']) ? trim($data['variant_name']) : '';
-            if ($product && $variantName) {
-                $variantSku = isset($data['variant_sku']) ? trim($data['variant_sku']) : '';
-                if (!$variantSku) {
-                    $variantSku = $product->sku . '-' . strtoupper(Str::random(4));
-                }
-
-                $variantImages = [];
-                if (!empty($data['variant_images'])) {
-                    $variantImages = array_map('trim', explode(',', $data['variant_images']));
-                }
-
-                ProductVariant::updateOrCreate(
-                    [
-                        'product_id' => $product->id,
-                        'sku' => $variantSku,
-                    ],
-                    [
-                        'name' => $variantName,
-                        'price' => (!empty($data['variant_price']) && is_numeric($data['variant_price'])) ? (float)$data['variant_price'] : null,
-                        'stock' => isset($data['variant_stock']) ? (int)$data['variant_stock'] : 0,
-                        'images' => $variantImages,
-                        'is_active' => true,
-                    ]
-                );
-
-                $importedVariantsCount++;
-            }
-        }
-
-        fclose($file);
-
-        $this->dispatch('swal', 
-            title: 'Import Completed!', 
-            text: "Successfully imported {$importedProductsCount} products and {$importedVariantsCount} variations.", 
-            icon: 'success'
-        );
         $this->resetPage();
     }
 
     public function exportCsv()
     {
-        $headers = [
-            'name', 'slug', 'sku', 'price', 'sale_price', 'stock', 'images',
-            'category', 'brand', 'short_description', 'description', 'is_active', 'is_featured',
-            'variant_name', 'variant_sku', 'variant_price', 'variant_stock', 'variant_images'
-        ];
-
-        $callback = function() use ($headers) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $headers);
-
-            $products = Product::with(['category', 'brand', 'variants'])->latest('id')->get();
-
-            foreach ($products as $product) {
-                $categoryName = $product->category?->name ?? '';
-                $brandName = $product->brand?->name ?? '';
-                $imagesList = is_array($product->images) ? implode(',', $product->images) : '';
-
-                $baseData = [
-                    $product->name,
-                    $product->slug,
-                    $product->sku,
-                    $product->price,
-                    $product->sale_price,
-                    $product->stock,
-                    $imagesList,
-                    $categoryName,
-                    $brandName,
-                    $product->short_description,
-                    $product->description,
-                    $product->is_active ? 1 : 0,
-                    $product->is_featured ? 1 : 0,
-                ];
-
-                if ($product->variants->isNotEmpty()) {
-                    foreach ($product->variants as $index => $variant) {
-                        $variantImagesList = is_array($variant->images) ? implode(',', $variant->images) : '';
-                        
-                        if ($index === 0) {
-                            $row = array_merge($baseData, [
-                                $variant->name,
-                                $variant->sku,
-                                $variant->price,
-                                $variant->stock,
-                                $variantImagesList
-                            ]);
-                        } else {
-                            $row = array_merge(array_fill(0, count($baseData), ''), [
-                                $variant->name,
-                                $variant->sku,
-                                $variant->price,
-                                $variant->stock,
-                                $variantImagesList
-                            ]);
-                        }
-                        fputcsv($file, $row);
-                    }
-                } else {
-                    $row = array_merge($baseData, ['', '', '', '', '']);
-                    fputcsv($file, $row);
-                }
-            }
-
-            fclose($file);
-        };
-
         $fileName = 'products_export_' . now()->format('Y_m_d_His') . '.csv';
-
-        return response()->streamDownload($callback, $fileName, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
-        ]);
+        return \Excel::download(new \App\Exports\ProductsExport, $fileName);
     }
 };
 ?>

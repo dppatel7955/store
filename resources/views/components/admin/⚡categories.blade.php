@@ -101,6 +101,15 @@ new class extends Component
         $this->validate($rules);
 
         if ($this->imageFile) {
+            if ($this->categoryId) {
+                $oldCategory = Category::find($this->categoryId);
+                if ($oldCategory && $oldCategory->image && !str_starts_with($oldCategory->image, 'http')) {
+                    $oldPath = public_path(ltrim($oldCategory->image, '/'));
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+            }
             $this->image = '/uploads/' . $this->imageFile->store('categories', 'custom_public');
         }
 
@@ -142,6 +151,13 @@ new class extends Component
             return;
         }
 
+        if ($category->image && !str_starts_with($category->image, 'http')) {
+            $path = public_path(ltrim($category->image, '/'));
+            if (file_exists($path)) {
+                @unlink($path);
+            }
+        }
+
         $category->delete();
         $this->dispatch('swal', title: 'Deleted!', text: 'Category deleted successfully.', icon: 'success');
     }
@@ -151,87 +167,24 @@ new class extends Component
     public function updatedCsvFile()
     {
         $this->validate([
-            'csvFile' => 'required|file|mimes:csv,txt|max:4096',
+            'csvFile' => 'required|file|mimes:csv,txt,xlsx,xls|max:4096',
         ]);
 
-        $filePath = $this->csvFile->getRealPath();
-        $file = fopen($filePath, 'r');
+        try {
+            $import = new \App\Imports\CategoriesImport;
+            \Excel::import($import, $this->csvFile->getRealPath());
 
-        $header = fgetcsv($file);
-        if (!$header) {
-            $this->dispatch('swal', title: 'Error!', text: 'Empty or invalid CSV file.', icon: 'error');
-            return;
+            $this->dispatch('swal', title: 'Import Completed!', text: "Successfully imported {$import->getImportedCount()} categories.", icon: 'success');
+        } catch (\Exception $e) {
+            $this->dispatch('swal', title: 'Import Failed!', text: $e->getMessage(), icon: 'error');
         }
-
-        $header = array_map(function($h) {
-            return Str::snake(trim(strtolower($h)));
-        }, $header);
-
-        $importedCount = 0;
-
-        while (($row = fgetcsv($file)) !== false) {
-            if (count($row) < count($header)) {
-                $row = array_pad($row, count($header), '');
-            } elseif (count($row) > count($header)) {
-                $row = array_slice($row, 0, count($header));
-            }
-
-            $data = array_combine($header, $row);
-            if (!$data) continue;
-
-            $name = isset($data['name']) ? trim($data['name']) : '';
-            if (!$name) continue;
-
-            $slug = !empty($data['slug']) ? trim($data['slug']) : Str::slug($name);
-
-            Category::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'name' => $name,
-                    'description' => isset($data['description']) ? trim($data['description']) : null,
-                    'image' => !empty($data['image']) ? trim($data['image']) : 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop',
-                    'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : true,
-                ]
-            );
-
-            $importedCount++;
-        }
-
-        fclose($file);
-
-        $this->dispatch('swal', title: 'Import Completed!', text: "Successfully imported {$importedCount} categories.", icon: 'success');
         $this->resetPage();
     }
 
     public function exportCsv()
     {
-        $headers = ['name', 'slug', 'description', 'image', 'is_active'];
-
-        $callback = function() use ($headers) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $headers);
-
-            $categories = Category::latest('id')->get();
-
-            foreach ($categories as $category) {
-                fputcsv($file, [
-                    $category->name,
-                    $category->slug,
-                    $category->description,
-                    $category->image,
-                    $category->is_active ? 1 : 0
-                ]);
-            }
-
-            fclose($file);
-        };
-
         $fileName = 'categories_export_' . now()->format('Y_m_d_His') . '.csv';
-
-        return response()->streamDownload($callback, $fileName, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
-        ]);
+        return \Excel::download(new \App\Exports\CategoriesExport, $fileName);
     }
 };
 ?>

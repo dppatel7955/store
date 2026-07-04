@@ -96,6 +96,15 @@ new class extends Component
         $this->validate($rules);
 
         if ($this->logoFile) {
+            if ($this->brandId) {
+                $oldBrand = Brand::find($this->brandId);
+                if ($oldBrand && $oldBrand->logo && !str_starts_with($oldBrand->logo, 'http')) {
+                    $oldPath = public_path(ltrim($oldBrand->logo, '/'));
+                    if (file_exists($oldPath)) {
+                        @unlink($oldPath);
+                    }
+                }
+            }
             $this->logo = '/uploads/' . $this->logoFile->store('brands', 'custom_public');
         }
 
@@ -135,6 +144,13 @@ new class extends Component
             return;
         }
 
+        if ($brand->logo && !str_starts_with($brand->logo, 'http')) {
+            $path = public_path(ltrim($brand->logo, '/'));
+            if (file_exists($path)) {
+                @unlink($path);
+            }
+        }
+
         $brand->delete();
         $this->dispatch('swal', title: 'Deleted!', text: 'Brand deleted successfully.', icon: 'success');
     }
@@ -144,85 +160,24 @@ new class extends Component
     public function updatedCsvFile()
     {
         $this->validate([
-            'csvFile' => 'required|file|mimes:csv,txt|max:4096',
+            'csvFile' => 'required|file|mimes:csv,txt,xlsx,xls|max:4096',
         ]);
 
-        $filePath = $this->csvFile->getRealPath();
-        $file = fopen($filePath, 'r');
+        try {
+            $import = new \App\Imports\BrandsImport;
+            \Excel::import($import, $this->csvFile->getRealPath());
 
-        $header = fgetcsv($file);
-        if (!$header) {
-            $this->dispatch('swal', title: 'Error!', text: 'Empty or invalid CSV file.', icon: 'error');
-            return;
+            $this->dispatch('swal', title: 'Import Completed!', text: "Successfully imported {$import->getImportedCount()} brands.", icon: 'success');
+        } catch (\Exception $e) {
+            $this->dispatch('swal', title: 'Import Failed!', text: $e->getMessage(), icon: 'error');
         }
-
-        $header = array_map(function($h) {
-            return Str::snake(trim(strtolower($h)));
-        }, $header);
-
-        $importedCount = 0;
-
-        while (($row = fgetcsv($file)) !== false) {
-            if (count($row) < count($header)) {
-                $row = array_pad($row, count($header), '');
-            } elseif (count($row) > count($header)) {
-                $row = array_slice($row, 0, count($header));
-            }
-
-            $data = array_combine($header, $row);
-            if (!$data) continue;
-
-            $name = isset($data['name']) ? trim($data['name']) : '';
-            if (!$name) continue;
-
-            $slug = !empty($data['slug']) ? trim($data['slug']) : Str::slug($name);
-
-            Brand::updateOrCreate(
-                ['slug' => $slug],
-                [
-                    'name' => $name,
-                    'logo' => !empty($data['logo']) ? trim($data['logo']) : 'https://images.unsplash.com/photo-1591453089816-0fbb971b454c?q=80&w=600',
-                    'is_active' => isset($data['is_active']) ? (bool)$data['is_active'] : true,
-                ]
-            );
-
-            $importedCount++;
-        }
-
-        fclose($file);
-
-        $this->dispatch('swal', title: 'Import Completed!', text: "Successfully imported {$importedCount} brands.", icon: 'success');
         $this->resetPage();
     }
 
     public function exportCsv()
     {
-        $headers = ['name', 'slug', 'logo', 'is_active'];
-
-        $callback = function() use ($headers) {
-            $file = fopen('php://output', 'w');
-            fputcsv($file, $headers);
-
-            $brands = Brand::latest('id')->get();
-
-            foreach ($brands as $brand) {
-                fputcsv($file, [
-                    $brand->name,
-                    $brand->slug,
-                    $brand->logo,
-                    $brand->is_active ? 1 : 0
-                ]);
-            }
-
-            fclose($file);
-        };
-
         $fileName = 'brands_export_' . now()->format('Y_m_d_His') . '.csv';
-
-        return response()->streamDownload($callback, $fileName, [
-            'Content-Type' => 'text/csv',
-            'Content-Disposition' => 'attachment; filename="' . $fileName . '"',
-        ]);
+        return \Excel::download(new \App\Exports\BrandsExport, $fileName);
     }
 };
 ?>

@@ -90,6 +90,13 @@ new class extends Component
     public function removeImage($index)
     {
         if (isset($this->imagesList[$index])) {
+            $img = $this->imagesList[$index];
+            if ($img && !str_starts_with($img, 'http')) {
+                $path = public_path(ltrim($img, '/'));
+                if (file_exists($path)) {
+                    @unlink($path);
+                }
+            }
             unset($this->imagesList[$index]);
             $this->imagesList = array_values($this->imagesList);
         }
@@ -110,6 +117,23 @@ new class extends Component
     public function removeVariant($index)
     {
         if (isset($this->variants[$index])) {
+            $variantData = $this->variants[$index];
+            if (!empty($variantData['id'])) {
+                $variant = \App\Models\ProductVariant::find($variantData['id']);
+                if ($variant) {
+                    if (is_array($variant->images)) {
+                        foreach ($variant->images as $img) {
+                            if ($img && !str_starts_with($img, 'http')) {
+                                $path = public_path(ltrim($img, '/'));
+                                if (file_exists($path)) {
+                                    @unlink($path);
+                                }
+                            }
+                        }
+                    }
+                    $variant->delete();
+                }
+            }
             unset($this->variants[$index]);
             $this->variants = array_values($this->variants);
         }
@@ -128,6 +152,13 @@ new class extends Component
     public function removeVariantImage($variantIndex, $imageIndex)
     {
         if (isset($this->variants[$variantIndex]['images'][$imageIndex])) {
+            $img = $this->variants[$variantIndex]['images'][$imageIndex];
+            if ($img && !str_starts_with($img, 'http')) {
+                $path = public_path(ltrim($img, '/'));
+                if (file_exists($path)) {
+                    @unlink($path);
+                }
+            }
             unset($this->variants[$variantIndex]['images'][$imageIndex]);
             $this->variants[$variantIndex]['images'] = array_values($this->variants[$variantIndex]['images']);
         }
