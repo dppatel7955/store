@@ -105,6 +105,17 @@ new class extends Component
 
         $this->validate($rules);
 
+        if ($this->categoryId && $this->parent_id) {
+            $category = Category::find($this->categoryId);
+            if ($category) {
+                $descendantIds = $category->getAllDescendantIds();
+                if (in_array((int)$this->parent_id, $descendantIds)) {
+                    $this->addError('parent_id', 'Cannot select a child or descendant category as the parent.');
+                    return;
+                }
+            }
+        }
+
         if ($this->imageFile) {
             if ($this->categoryId) {
                 $oldCategory = Category::find($this->categoryId);
@@ -301,7 +312,22 @@ new class extends Component
                                 <img src="{{ $category->image }}" alt="{{ $category->name }}" class="h-10 w-10 object-cover rounded-lg border border-slate-200">
                             </td>
                             <!-- Name -->
-                            <td class="p-4 text-xs font-bold text-slate-800">{{ $category->name }}</td>
+                            <td class="p-4 text-xs font-bold text-slate-800">
+                                @php
+                                    $depth = 0;
+                                    $temp = $category;
+                                    while ($temp->parent) {
+                                        $depth++;
+                                        $temp = $temp->parent;
+                                    }
+                                @endphp
+                                @if($depth > 0)
+                                    <span class="text-slate-400 font-mono select-none mr-1.5">
+                                        {{ str_repeat('│  ', $depth - 1) }}└─
+                                    </span>
+                                @endif
+                                {{ $category->name }}
+                            </td>
                             <!-- Parent -->
                             <td class="p-4 text-xs text-slate-600 font-semibold">
                                 @if($category->parent)
@@ -436,8 +462,12 @@ new class extends Component
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
                     >
                         <option value="">-- None (Make Root Category) --</option>
-                        @foreach(\App\Models\Category::whereNull('parent_id')->where('id', '!=', $categoryId)->get() as $parentCat)
-                            <option value="{{ $parentCat->id }}">{{ $parentCat->name }}</option>
+                        @foreach(\App\Models\Category::getTree() as $parentCat)
+                            @if($parentCat->id != $categoryId && !in_array($parentCat->id, $categoryId ? \App\Models\Category::find($categoryId)->getAllDescendantIds() : []))
+                                <option value="{{ $parentCat->id }}">
+                                    {{ str_repeat('— ', $parentCat->depth) }}{{ $parentCat->name }}
+                                </option>
+                            @endif
                         @endforeach
                     </select>
                     @error('parent_id') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
