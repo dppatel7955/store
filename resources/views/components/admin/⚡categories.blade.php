@@ -19,6 +19,7 @@ new class extends Component
     public $categoryId = null;
     public $name = '';
     public $slug = '';
+    public $parent_id = null;
     public $description = '';
     public $image = '';
     public $imageFile = null;
@@ -44,6 +45,7 @@ new class extends Component
     public function categories()
     {
         return Category::query()
+            ->with('parent')
             ->when($this->search, function ($query) {
                 $query->where('name', 'like', '%' . $this->search . '%')
                       ->orWhere('description', 'like', '%' . $this->search . '%')
@@ -63,6 +65,7 @@ new class extends Component
             $this->categoryId = $category->id;
             $this->name = $category->name;
             $this->slug = $category->slug;
+            $this->parent_id = $category->parent_id;
             $this->description = $category->description;
             $this->image = $category->image;
             $this->is_active = (bool) $category->is_active;
@@ -78,6 +81,7 @@ new class extends Component
         $this->categoryId = null;
         $this->name = '';
         $this->slug = '';
+        $this->parent_id = null;
         $this->description = '';
         $this->image = '';
         $this->imageFile = null;
@@ -89,6 +93,7 @@ new class extends Component
         $rules = [
             'name' => 'required|min:3|max:255',
             'slug' => 'required|max:255|unique:categories,slug,' . ($this->categoryId ?? 'NULL') . ',id',
+            'parent_id' => 'nullable|exists:categories,id|different:categoryId',
             'description' => 'nullable|max:1000',
             'imageFile' => 'nullable|image|max:2048',
             'is_active' => 'required|boolean'
@@ -122,6 +127,7 @@ new class extends Component
             [
                 'name' => $this->name,
                 'slug' => $this->slug,
+                'parent_id' => $this->parent_id ?: null,
                 'description' => $this->description,
                 'image' => $this->image,
                 'is_active' => $this->is_active
@@ -280,6 +286,7 @@ new class extends Component
                     <tr class="border-b border-slate-200 bg-slate-50/50">
                         <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Image</th>
                         <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Name</th>
+                        <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Parent</th>
                         <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Slug</th>
                         <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Description</th>
                         <th class="p-4 text-xs font-bold text-slate-500 uppercase tracking-wider">Status</th>
@@ -295,6 +302,16 @@ new class extends Component
                             </td>
                             <!-- Name -->
                             <td class="p-4 text-xs font-bold text-slate-800">{{ $category->name }}</td>
+                            <!-- Parent -->
+                            <td class="p-4 text-xs text-slate-600 font-semibold">
+                                @if($category->parent)
+                                    <span class="inline-flex items-center gap-1.5 px-2 py-1 rounded-md bg-indigo-50 border border-indigo-100 text-indigo-700 text-[10px]">
+                                        {{ $category->parent->name }}
+                                    </span>
+                                @else
+                                    <span class="text-slate-400 font-normal">-</span>
+                                @endif
+                            </td>
                             <!-- Slug -->
                             <td class="p-4 text-xs text-slate-500 font-mono">{{ $category->slug }}</td>
                             <!-- Description -->
@@ -327,7 +344,7 @@ new class extends Component
                         </tr>
                     @empty
                         <tr>
-                            <td colspan="6" class="p-8 text-center text-xs text-slate-400 font-semibold">
+                            <td colspan="7" class="p-8 text-center text-xs text-slate-400 font-semibold">
                                 No categories found.
                             </td>
                         </tr>
@@ -409,6 +426,21 @@ new class extends Component
                         class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition font-mono"
                     />
                     @error('slug') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- Parent Category -->
+                <div>
+                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">Parent Category (Optional)</label>
+                    <select 
+                        wire:model="parent_id"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
+                    >
+                        <option value="">-- None (Make Root Category) --</option>
+                        @foreach(\App\Models\Category::whereNull('parent_id')->where('id', '!=', $categoryId)->get() as $parentCat)
+                            <option value="{{ $parentCat->id }}">{{ $parentCat->name }}</option>
+                        @endforeach
+                    </select>
+                    @error('parent_id') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                 </div>
 
                 <!-- Image File Upload -->

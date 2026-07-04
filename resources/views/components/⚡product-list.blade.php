@@ -33,7 +33,7 @@ new class extends Component
 
     public function mount()
     {
-        $this->categoriesList = Category::where('is_active', true)->get();
+        $this->categoriesList = Category::with('children')->whereNull('parent_id')->where('is_active', true)->get();
         $this->brandsList = Brand::where('is_active', true)->get();
 
         if (request()->has('search') && !empty(request('search'))) {
@@ -72,7 +72,10 @@ new class extends Component
         }
 
         if (!empty($this->selectedCategories)) {
-            $query->whereIn('category_id', $this->selectedCategories);
+            // Find all child categories of selected categories
+            $childCategoryIds = Category::whereIn('parent_id', $this->selectedCategories)->pluck('id')->toArray();
+            $allCategoryIds = array_unique(array_merge($this->selectedCategories, $childCategoryIds));
+            $query->whereIn('category_id', $allCategoryIds);
         }
 
         if (!empty($this->selectedBrands)) {
@@ -184,17 +187,35 @@ new class extends Component
                 <!-- Categories -->
                 <div>
                     <h4 class="text-sm font-bold text-slate-800 mb-3">Categories</h4>
-                    <div class="space-y-2.5">
+                    <div class="space-y-3">
                         @foreach($categoriesList as $cat)
-                            <label class="flex items-center gap-3 text-sm text-slate-650 hover:text-slate-900 cursor-pointer select-none">
-                                <input 
-                                    type="checkbox" 
-                                    value="{{ $cat->id }}" 
-                                    wire:model.live="selectedCategories"
-                                    class="rounded border-slate-300 bg-slate-50 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white"
-                                  />
-                                <span>{{ $cat->name }}</span>
-                            </label>
+                            <div class="space-y-2">
+                                <label class="flex items-center gap-3 text-sm text-slate-800 font-bold hover:text-indigo-600 cursor-pointer select-none">
+                                    <input 
+                                        type="checkbox" 
+                                        value="{{ $cat->id }}" 
+                                        wire:model.live="selectedCategories"
+                                        class="rounded border-slate-300 bg-slate-50 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white"
+                                      />
+                                    <span>{{ $cat->name }}</span>
+                                </label>
+                                @if($cat->children->isNotEmpty())
+                                    <div class="pl-5 space-y-2 border-l border-slate-100 ml-2">
+                                        @foreach($cat->children as $child)
+                                            <label class="flex items-center gap-2.5 text-xs text-slate-600 hover:text-indigo-600 cursor-pointer select-none">
+                                                <input 
+                                                    type="checkbox" 
+                                                    value="{{ $child->id }}" 
+                                                    wire:model.live="selectedCategories"
+                                                    class="rounded border-slate-300 bg-slate-50 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white h-3.5 w-3.5"
+                                                  />
+                                                <span class="text-slate-400 font-mono">└</span>
+                                                <span>{{ $child->name }}</span>
+                                            </label>
+                                        @endforeach
+                                    </div>
+                                @endif
+                            </div>
                         @endforeach
                     </div>
                 </div>

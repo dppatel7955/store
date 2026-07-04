@@ -17,8 +17,9 @@ new class extends Component
 
     public function mount()
     {
-        $this->categories = Category::where('is_active', true)
-            ->select(['id', 'name', 'slug', 'image', 'description'])
+        $this->categories = Category::with('children')
+            ->whereNull('parent_id')
+            ->where('is_active', true)
             ->get();
 
         $this->brands = Brand::where('is_active', true)
@@ -238,13 +239,25 @@ new class extends Component
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
             @foreach($categories as $cat)
-                <a href="/shop?category={{ $cat->slug }}" class="group relative block overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 text-center hover:border-indigo-500 hover:shadow-md transition duration-300">
-                    <div class="h-24 w-24 mx-auto mb-4 overflow-hidden rounded-full border border-slate-100 group-hover:scale-105 transition duration-300">
-                        <img src="{{ $cat->image }}" alt="{{ $cat->name }}" class="h-full w-full object-cover">
-                    </div>
-                    <h3 class="text-base font-bold text-slate-800 group-hover:text-indigo-600 transition">{{ $cat->name }}</h3>
-                    <p class="text-xs text-slate-500 mt-1 line-clamp-1">{{ $cat->description }}</p>
-                </a>
+                <div class="group relative block overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 text-center hover:border-indigo-500 hover:shadow-md transition duration-300">
+                    <a href="/shop?category={{ $cat->slug }}" class="block">
+                        <div class="h-24 w-24 mx-auto mb-4 overflow-hidden rounded-full border border-slate-100 group-hover:scale-105 transition duration-300">
+                            <img src="{{ $cat->image }}" alt="{{ $cat->name }}" class="h-full w-full object-cover">
+                        </div>
+                        <h3 class="text-base font-bold text-slate-800 group-hover:text-indigo-600 transition">{{ $cat->name }}</h3>
+                    </a>
+                    @if($cat->children->isNotEmpty())
+                        <div class="mt-2.5 flex flex-wrap gap-1.5 justify-center">
+                            @foreach($cat->children->take(3) as $child)
+                                <a href="/shop?category={{ $child->slug }}" class="px-2 py-0.5 rounded-full bg-slate-50 text-[10px] text-slate-600 font-bold border border-slate-100 hover:bg-indigo-50 hover:border-indigo-150 hover:text-indigo-600 transition">
+                                    {{ $child->name }}
+                                </a>
+                            @endforeach
+                        </div>
+                    @else
+                        <p class="text-xs text-slate-500 mt-1 line-clamp-1">{{ $cat->description }}</p>
+                    @endif
+                </div>
             @endforeach
         </div>
     </section>
