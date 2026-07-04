@@ -67,7 +67,10 @@ new class extends Component
             $query->where(function ($q) {
                 $q->where('name', 'like', '%' . $this->search . '%')
                   ->orWhere('description', 'like', '%' . $this->search . '%')
-                  ->orWhere('short_description', 'like', '%' . $this->search . '%');
+                  ->orWhere('short_description', 'like', '%' . $this->search . '%')
+                  ->orWhereHas('category', function ($catQuery) {
+                      $catQuery->where('name', 'like', '%' . $this->search . '%');
+                  });
             });
         }
 
@@ -270,8 +273,8 @@ new class extends Component
                             <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100 block">
                                 <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                 @if($prod->sale_price)
-                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full">
-                                        Sale
+                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                        {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                     </span>
                                 @endif
                             </a>

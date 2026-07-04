@@ -28,7 +28,7 @@ class CartService
         if ($variantId) {
             $variant = ProductVariant::find($variantId);
             if ($variant) {
-                $price = $variant->price ?: $price;
+                $price = $variant->sale_price ?? $variant->price ?? $price;
                 $variantName = $variant->name;
                 $variantImage = (is_array($variant->images) && count($variant->images) > 0) ? $variant->images[0] : null;
             }

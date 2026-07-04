@@ -135,7 +135,7 @@ new class extends Component
     <nav class="text-sm text-slate-500">
         <a href="/" class="hover:text-indigo-600 transition">Home</a> &nbsp;/&nbsp;
         <a href="/shop" class="hover:text-indigo-600 transition">Shop</a> &nbsp;/&nbsp;
-        <a href="/shop?category={{ $product->category->slug }}" class="hover:text-indigo-600 transition">{{ $product->category->name }}</a> &nbsp;/&nbsp;
+        <a href="{{ route('categories.detail', ['slug' => $product->category->slug]) }}" class="hover:text-indigo-600 transition">{{ $product->category->name }}</a> &nbsp;/&nbsp;
         <span class="text-slate-800 font-semibold">{{ $product->name }}</span>
     </nav>
 
@@ -147,6 +147,7 @@ new class extends Component
         selectedVariantId: @entangle('selectedVariantId'),
         variants: {{ json_encode($product->variants) }},
         selectedVariantPrice: null,
+        selectedVariantSalePrice: null,
         selectedVariantStock: {{ $product->stock }},
         selectedVariantSku: '{{ $product->sku }}',
         lightboxOpen: false,
@@ -160,6 +161,7 @@ new class extends Component
             let variant = this.variants.find(v => v.id == variantId);
             if (variant) {
                 this.selectedVariantPrice = variant.price;
+                this.selectedVariantSalePrice = variant.sale_price;
                 this.selectedVariantStock = variant.stock;
                 this.selectedVariantSku = variant.sku || '{{ $product->sku }}';
                 
@@ -172,6 +174,7 @@ new class extends Component
                 }
             } else {
                 this.selectedVariantPrice = null;
+                this.selectedVariantSalePrice = null;
                 this.selectedVariantStock = {{ $product->stock }};
                 this.selectedVariantSku = '{{ $product->sku }}';
                 this.activeImagesList = this.productImages;
@@ -282,13 +285,27 @@ new class extends Component
                 <!-- Pricing -->
                 <div class="flex items-baseline gap-3 mb-6">
                     <template x-if="selectedVariantPrice !== null">
-                        <span class="text-3xl font-extrabold text-slate-900" x-text="'₹' + Number(selectedVariantPrice).toLocaleString()"></span>
+                        <div class="flex items-baseline gap-3 flex-wrap">
+                            <template x-if="selectedVariantSalePrice">
+                                <div class="flex items-baseline gap-3 flex-wrap">
+                                    <span class="text-3xl font-extrabold text-slate-900" x-text="'₹' + Number(selectedVariantSalePrice).toLocaleString()"></span>
+                                    <span class="text-sm text-slate-400 line-through" x-text="'₹' + Number(selectedVariantPrice).toLocaleString()"></span>
+                                    <span class="bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm" x-text="Math.round(100 - (Number(selectedVariantSalePrice) / Number(selectedVariantPrice) * 100)) + '% OFF'"></span>
+                                </div>
+                            </template>
+                            <template x-if="!selectedVariantSalePrice">
+                                <span class="text-3xl font-extrabold text-slate-900" x-text="'₹' + Number(selectedVariantPrice).toLocaleString()"></span>
+                            </template>
+                        </div>
                     </template>
                     <template x-if="selectedVariantPrice === null">
-                        <div class="flex items-baseline gap-3">
+                        <div class="flex items-baseline gap-3 flex-wrap">
                             @if($product->sale_price)
                                 <span class="text-3xl font-extrabold text-slate-900">₹{{ number_format($product->sale_price) }}</span>
                                 <span class="text-sm text-slate-400 line-through">₹{{ number_format($product->price) }}</span>
+                                <span class="bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                    {{ round(100 - ($product->sale_price / $product->price * 100)) }}% OFF
+                                </span>
                             @else
                                 <span class="text-3xl font-extrabold text-slate-900">₹{{ number_format($product->price) }}</span>
                             @endif

@@ -64,6 +64,7 @@ new class extends Component
                 'name' => $variant->name,
                 'sku' => $variant->sku,
                 'price' => $variant->price,
+                'sale_price' => $variant->sale_price,
                 'stock' => $variant->stock,
                 'images' => is_array($variant->images) ? $variant->images : [],
             ];
@@ -109,6 +110,7 @@ new class extends Component
             'name' => '',
             'sku' => '',
             'price' => '',
+            'sale_price' => '',
             'stock' => 0,
             'images' => [],
         ];
@@ -185,6 +187,7 @@ new class extends Component
             'variants.*.name' => 'required|min:1|max:255',
             'variants.*.sku' => 'nullable|max:100',
             'variants.*.price' => 'nullable|numeric|min:0',
+            'variants.*.sale_price' => 'nullable|numeric|min:0|lt:variants.*.price',
             'variants.*.stock' => 'required|integer|min:0',
             'tempImages.*.*' => 'image|max:2048',
         ], [
@@ -246,6 +249,7 @@ new class extends Component
                     'name' => $variantData['name'],
                     'sku' => $variantData['sku'] ?: ($product->sku . '-' . strtoupper(Str::random(4))),
                     'price' => $variantData['price'] ?: null,
+                    'sale_price' => $variantData['sale_price'] ?: null,
                     'stock' => $variantData['stock'],
                     'images' => $variantImages,
                     'is_active' => true,
@@ -407,23 +411,28 @@ new class extends Component
                                     </div>
                                 </div>
 
-                                <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-600 mb-1">Variant Price Override (₹)</label>
-                                        <input type="number" step="0.01" wire:model="variants.{{ $index }}.price" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="Inherits product price if blank">
-                                        @error('variants.'.$index.'.price') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-600 mb-1">Stock Quantity <span class="text-rose-500">*</span></label>
-                                        <input type="number" wire:model="variants.{{ $index }}.stock" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition">
-                                        @error('variants.'.$index.'.stock') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
-                                    </div>
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-600 mb-1">Variant Images <span class="text-slate-400 font-normal">(Multiple)</span></label>
-                                        <input type="file" wire:model="tempImages.{{ $index }}" multiple class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
-                                        @error('tempImages.'.$index) <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
-                                    </div>
-                                </div>
+                                 <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                                     <div>
+                                         <label class="block text-[10px] font-semibold text-slate-600 mb-1">Price Override (₹)</label>
+                                         <input type="number" step="0.01" wire:model="variants.{{ $index }}.price" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="Base override">
+                                         @error('variants.'.$index.'.price') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                     </div>
+                                     <div>
+                                         <label class="block text-[10px] font-semibold text-slate-600 mb-1">Sale Price Override (₹)</label>
+                                         <input type="number" step="0.01" wire:model="variants.{{ $index }}.sale_price" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="Optional sale price">
+                                         @error('variants.'.$index.'.sale_price') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                     </div>
+                                     <div>
+                                         <label class="block text-[10px] font-semibold text-slate-600 mb-1">Stock Quantity <span class="text-rose-500">*</span></label>
+                                         <input type="number" wire:model="variants.{{ $index }}.stock" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition">
+                                         @error('variants.'.$index.'.stock') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                     </div>
+                                     <div>
+                                         <label class="block text-[10px] font-semibold text-slate-600 mb-1">Variant Images <span class="text-slate-400 font-normal">(Multiple)</span></label>
+                                         <input type="file" wire:model="tempImages.{{ $index }}" multiple class="w-full text-xs text-slate-500 file:mr-2 file:py-1 file:px-2 file:rounded-md file:border-0 file:text-[10px] file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                                         @error('tempImages.'.$index) <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                     </div>
+                                 </div>
 
                                 <!-- Images Previews / Galleries -->
                                 <div class="space-y-3 mt-2">

@@ -186,8 +186,8 @@ new class extends Component
                             <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
                                 <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                 @if($prod->sale_price)
-                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full">
-                                        Sale
+                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                        {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                     </span>
                                 @endif
                             </div>
@@ -240,7 +240,7 @@ new class extends Component
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
             @foreach($categories as $cat)
                 <div class="group relative block overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 text-center hover:border-indigo-500 hover:shadow-md transition duration-300">
-                    <a href="/shop?category={{ $cat->slug }}" class="block">
+                    <a href="{{ route('categories.detail', ['slug' => $cat->slug]) }}" class="block">
                         <div class="h-24 w-24 mx-auto mb-4 overflow-hidden rounded-full border border-slate-100 group-hover:scale-105 transition duration-300">
                             <img src="{{ $cat->image }}" alt="{{ $cat->name }}" class="h-full w-full object-cover">
                         </div>
@@ -249,7 +249,7 @@ new class extends Component
                     @if($cat->children->isNotEmpty())
                         <div class="mt-2.5 flex flex-wrap gap-1.5 justify-center">
                             @foreach($cat->children->take(3) as $child)
-                                <a href="/shop?category={{ $child->slug }}" class="px-2 py-0.5 rounded-full bg-slate-50 text-[10px] text-slate-600 font-bold border border-slate-100 hover:bg-indigo-50 hover:border-indigo-150 hover:text-indigo-600 transition">
+                                <a href="{{ route('categories.detail', ['slug' => $child->slug]) }}" class="px-2 py-0.5 rounded-full bg-slate-50 text-[10px] text-slate-600 font-bold border border-slate-100 hover:bg-indigo-50 hover:border-indigo-150 hover:text-indigo-600 transition">
                                     {{ $child->name }}
                                 </a>
                             @endforeach
@@ -371,8 +371,8 @@ new class extends Component
                             <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
                                 <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                 @if($prod->sale_price)
-                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-1.5 py-0.5 rounded-full">
-                                        Sale
+                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                        {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                     </span>
                                 @endif
                             </div>

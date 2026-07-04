@@ -14,6 +14,14 @@ Route::get('/shop/{slug}', function ($slug) {
     return view('pages.detail', compact('slug'));
 })->name('shop.detail');
 
+Route::get('/categories/{slug}', function ($slug) {
+    $category = \App\Models\Category::with('children')->where('slug', $slug)->firstOrFail();
+    if ($category->children->where('is_active', true)->isNotEmpty()) {
+        return view('pages.category-detail', compact('category'));
+    }
+    return redirect()->route('shop', ['category' => $category->slug]);
+})->name('categories.detail');
+
 Route::get('/login', function () {
     if (auth()->check()) {
         return redirect()->route('home');
