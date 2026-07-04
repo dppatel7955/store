@@ -11,7 +11,7 @@
                 @endif
                 <span class="text-slate-600">{{ $category->name }}</span>
             </nav>
-            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">{{ $category->name }} Subcategories</h1>
+            <h1 class="text-3xl font-extrabold tracking-tight text-slate-900">{{ $category->name }}</h1>
             <p class="text-sm text-slate-500 mt-1">{{ $category->description ?? 'Browse the subcategories under ' . $category->name }}</p>
         </div>
 
