@@ -80,6 +80,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/categories', function () {
         return view('pages.admin.categories');
     })->name('admin.categories');
+    Route::get('/admin/coupons', function () {
+        return view('pages.admin.coupons');
+    })->name('admin.coupons');
     Route::get('/admin/brands', function () {
         return view('pages.admin.brands');
     })->name('admin.brands');

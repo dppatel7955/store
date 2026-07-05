@@ -14,6 +14,11 @@ new class extends Component
     public float $shipping = 0;
     public float $grandTotal = 0;
 
+    // Coupon fields
+    public string $couponCode = '';
+    public ?string $appliedCoupon = null;
+    public float $discount = 0.00;
+
     // Shipping info
     public string $name = '';
     public string $email = '';
@@ -35,13 +40,76 @@ new class extends Component
         if ($this->subtotal > 50000) {
             $this->shipping = 0.00;
         }
-        $this->grandTotal = $this->subtotal + $this->shipping;
+        $this->recalculateTotals();
 
         if (auth()->check()) {
             $this->name = auth()->user()->name;
             $this->email = auth()->user()->email;
             $this->phone = auth()->user()->phone ?? '';
         }
+    }
+
+    public function applyCoupon()
+    {
+        $this->resetErrorBag('couponCode');
+        $code = strtoupper(trim($this->couponCode));
+
+        if (empty($code)) {
+            $this->addError('couponCode', 'Please enter a coupon code.');
+            return;
+        }
+
+        $coupon = \App\Models\Coupon::where('code', $code)->first();
+
+        if (!$coupon) {
+            $this->addError('couponCode', 'Invalid coupon code.');
+            return;
+        }
+
+        if (!$coupon->isValidForAmount($this->subtotal, auth()->id())) {
+            if (!$coupon->is_active) {
+                $this->addError('couponCode', 'This coupon is inactive.');
+            } elseif ($coupon->isExpired()) {
+                $this->addError('couponCode', 'This coupon has expired.');
+            } elseif ($coupon->user_id && auth()->id() !== (int)$coupon->user_id) {
+                $this->addError('couponCode', 'This coupon is restricted to a different user account.');
+            } elseif ($coupon->min_order_amount && $this->subtotal < $coupon->min_order_amount) {
+                $this->addError('couponCode', "Min order of ₹" . number_format($coupon->min_order_amount) . " required.");
+            } else {
+                $this->addError('couponCode', 'This coupon is not valid.');
+            }
+            return;
+        }
+
+        $calculatedDiscount = $coupon->calculateDiscountForCart($this->cart);
+
+        if ($calculatedDiscount <= 0) {
+            $this->addError('couponCode', 'Your cart does not contain qualifying products for this coupon.');
+            return;
+        }
+
+        $this->appliedCoupon = $coupon->code;
+        $this->discount = $calculatedDiscount;
+        $this->recalculateTotals();
+
+        $this->dispatch('swal', title: 'Coupon Applied!', text: "Discount of ₹" . number_format($this->discount) . " applied.", icon: 'success');
+    }
+
+    public function removeCoupon()
+    {
+        $this->appliedCoupon = null;
+        $this->discount = 0.00;
+        $this->couponCode = '';
+        $this->recalculateTotals();
+        $this->dispatch('swal', title: 'Coupon Removed!', text: 'Coupon has been removed.', icon: 'info');
+    }
+
+    public function recalculateTotals()
+    {
+        if ($this->subtotal > 50000) {
+            $this->shipping = 0.00;
+        }
+        $this->grandTotal = max(0, $this->subtotal - $this->discount + $this->shipping);
     }
 
     public function placeOrder()
@@ -95,6 +163,8 @@ new class extends Component
 
         $order = Order::create([
             'user_id' => auth()->id(),
+            'coupon_code' => $this->appliedCoupon,
+            'discount_amount' => $this->discount,
             'grand_total' => $this->grandTotal,
             'payment_method' => $this->paymentMethod,
             'payment_status' => 'pending',
@@ -421,11 +491,50 @@ new class extends Component
                     @endforeach
                 </div>
 
+                <!-- Promo Code / Coupon -->
+                <div class="border-t border-slate-200 pt-4 space-y-2">
+                    <label class="block text-xs font-semibold text-slate-500">Have a promo code?</label>
+                    @if($appliedCoupon)
+                        <div class="flex items-center justify-between bg-indigo-50 border border-indigo-150 rounded-xl p-2.5">
+                            <div class="flex items-center gap-1.5">
+                                <svg class="h-4 w-4 text-indigo-650" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 5v2m0 4v2m0 4v2M5 5a2 2 0 00-2 2v3a2 2 0 110 4v3a2 2 0 002 2h14a2 2 0 002-2v-3a2 2 0 110-4V7a2 2 0 00-2-2H5z" />
+                                </svg>
+                                <span class="text-xs font-bold text-indigo-700 uppercase tracking-wider font-mono">{{ $appliedCoupon }}</span>
+                            </div>
+                            <button type="button" wire:click="removeCoupon" class="text-xs font-bold text-rose-600 hover:text-rose-700">Remove</button>
+                        </div>
+                    @else
+                        <div class="flex items-center gap-2">
+                            <input 
+                                type="text" 
+                                wire:model="couponCode" 
+                                placeholder="e.g. SAVE20" 
+                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition font-mono uppercase"
+                            />
+                            <button 
+                                type="button" 
+                                wire:click="applyCoupon" 
+                                class="rounded-xl border border-indigo-600 bg-indigo-50 text-indigo-705 px-4 py-2 text-xs font-bold hover:bg-indigo-100 transition whitespace-nowrap"
+                            >
+                                Apply
+                            </button>
+                        </div>
+                        @error('couponCode') <span class="text-[10px] text-rose-600 font-semibold mt-1 block">{{ $message }}</span> @enderror
+                    @endif
+                </div>
+
                 <div class="border-t border-slate-200 pt-4 space-y-2.5 text-sm text-slate-600">
                     <div class="flex justify-between">
                         <span>Subtotal</span>
                         <span class="font-semibold text-slate-800">₹{{ number_format($subtotal) }}</span>
                     </div>
+                    @if($discount > 0)
+                        <div class="flex justify-between text-emerald-700 font-bold">
+                            <span>Discount</span>
+                            <span>- ₹{{ number_format($discount) }}</span>
+                        </div>
+                    @endif
                     <div class="flex justify-between">
                         <span>Shipping</span>
                         @if($shipping > 0)

@@ -122,10 +122,19 @@ new class extends Component
 
                 <!-- Summary Breakdown -->
                 <div class="border-t border-slate-200 pt-4 flex flex-col items-end gap-2 text-xs">
+                    @php
+                        $itemsSubtotal = $order->items->sum('total_amount');
+                    @endphp
                     <div class="flex justify-between w-64 text-slate-500">
                         <span>Items Subtotal:</span>
-                        <span class="font-bold text-slate-800">₹{{ number_format($order->grand_total - $order->shipping_amount) }}</span>
+                        <span class="font-bold text-slate-800">₹{{ number_format($itemsSubtotal) }}</span>
                     </div>
+                    @if($order->discount_amount > 0)
+                        <div class="flex justify-between w-64 text-emerald-700 font-bold">
+                            <span>Coupon Discount ({{ $order->coupon_code }}):</span>
+                            <span>- ₹{{ number_format($order->discount_amount) }}</span>
+                        </div>
+                    @endif
                     <div class="flex justify-between w-64 text-slate-500">
                         <span>Shipping Cost:</span>
                         <span class="font-bold text-slate-800">₹{{ number_format($order->shipping_amount) }}</span>

@@ -139,10 +139,19 @@ new class extends Component
 
                 <!-- Financial calculation summary -->
                 <div class="border-t border-slate-200 pt-4 flex flex-col items-end gap-2 text-xs text-slate-600">
+                    @php
+                        $itemsSubtotal = $order->items->sum('total_amount');
+                    @endphp
                     <div class="flex justify-between w-64">
                         <span>Items Subtotal:</span>
-                        <span class="font-semibold text-slate-800">₹{{ number_format($order->grand_total - $order->shipping_amount) }}</span>
+                        <span class="font-semibold text-slate-800">₹{{ number_format($itemsSubtotal) }}</span>
                     </div>
+                    @if($order->discount_amount > 0)
+                        <div class="flex justify-between w-64 text-emerald-700 font-bold">
+                            <span>Coupon Discount ({{ $order->coupon_code }}):</span>
+                            <span>- ₹{{ number_format($order->discount_amount) }}</span>
+                        </div>
+                    @endif
                     <div class="flex justify-between w-64">
                         <span>Shipping Cost:</span>
                         <span class="font-semibold text-slate-800">₹{{ number_format($order->shipping_amount) }}</span>

@@ -12,6 +12,8 @@ class Order extends Model
 
     protected $fillable = [
         'user_id',
+        'coupon_code',
+        'discount_amount',
         'grand_total',
         'payment_method',
         'payment_status',
@@ -26,6 +28,7 @@ class Order extends Model
         'shipping_address' => 'array',
         'grand_total' => 'decimal:2',
         'shipping_amount' => 'decimal:2',
+        'discount_amount' => 'decimal:2',
     ];
 
     public function user()
