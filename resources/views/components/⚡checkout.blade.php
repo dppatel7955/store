@@ -486,7 +486,12 @@ new class extends Component
                                     <span class="text-[10px] text-slate-500">Qty: {{ $item['quantity'] }}</span>
                                 </div>
                             </div>
-                            <span class="text-xs font-bold text-slate-900">₹{{ number_format($item['total']) }}</span>
+                            <div class="text-right flex flex-col items-end">
+                                <span class="text-xs font-bold text-slate-900">₹{{ number_format($item['total']) }}</span>
+                                @if(isset($item['original_price']) && $item['price'] < $item['original_price'])
+                                    <span class="text-[9px] text-slate-400 line-through">₹{{ number_format($item['original_price'] * $item['quantity']) }}</span>
+                                @endif
+                            </div>
                         </div>
                     @endforeach
                 </div>

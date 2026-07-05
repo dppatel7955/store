@@ -21,6 +21,7 @@ class CartService
             return;
         }
 
+        $originalPrice = $product->price;
         $price = $product->sale_price ?? $product->price;
         $variantName = null;
         $variantImage = null;
@@ -28,6 +29,7 @@ class CartService
         if ($variantId) {
             $variant = ProductVariant::find($variantId);
             if ($variant) {
+                $originalPrice = $variant->price ?: $product->price;
                 $price = $variant->sale_price ?? $variant->price ?? $price;
                 $variantName = $variant->name;
                 $variantImage = (is_array($variant->images) && count($variant->images) > 0) ? $variant->images[0] : null;
@@ -47,6 +49,7 @@ class CartService
                 'name' => $product->name,
                 'slug' => $product->slug,
                 'price' => (float)$price,
+                'original_price' => (float)$originalPrice,
                 'image' => $variantImage ?? ($product->images[0] ?? null),
                 'quantity' => $quantity,
                 'total' => (float)($price * $quantity)
