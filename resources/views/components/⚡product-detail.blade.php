@@ -245,14 +245,26 @@ new class extends Component
                      y = (($event.clientY - rect.top) / rect.height) * 100;
                  "
             >
-                <template x-if="mediaItems[activeIndex]?.type === 'image'">
-                    <img :src="mediaItems[activeIndex]?.url" alt="{{ $product->name }}" 
-                         class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
-                         :style="zoom ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
+                <template x-for="(item, idx) in mediaItems" :key="idx">
+                    <div x-show="activeIndex === idx"
+                         x-transition:enter="transition ease-out duration-700 transform"
+                         x-transition:enter-start="opacity-0 scale-102"
+                         x-transition:enter-end="opacity-100 scale-100"
+                         x-transition:leave="transition ease-in duration-550 transform absolute inset-0"
+                         x-transition:leave-start="opacity-100 scale-100"
+                         x-transition:leave-end="opacity-0 scale-98"
+                         class="w-full h-full flex items-center justify-center bg-white"
                     >
-                </template>
-                <template x-if="mediaItems[activeIndex]?.type === 'video'">
-                    <video :src="mediaItems[activeIndex]?.url" controls autoplay muted @ended="goToNext()" class="h-full w-full object-contain bg-black"></video>
+                        <template x-if="item.type === 'image'">
+                            <img :src="item.url" alt="{{ $product->name }}" 
+                                 class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
+                                 :style="zoom ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
+                            >
+                        </template>
+                        <template x-if="item.type === 'video'">
+                            <video :src="item.url" controls autoplay muted @ended="goToNext()" class="h-full w-full object-contain bg-black"></video>
+                        </template>
+                    </div>
                 </template>
             </div>
             
