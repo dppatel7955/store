@@ -22,6 +22,8 @@ new class extends Component
     public $stock = 0;
     public array $imagesList = [];
     public $imageFiles = [];
+    public $videoFile = null;
+    public $currentVideoPath = null;
     public string $newImageUrl = '';
     public $short_description = '';
     public $description = '';
@@ -51,6 +53,7 @@ new class extends Component
         $this->sale_price = $product->sale_price;
         $this->stock = $product->stock;
         $this->imagesList = is_array($product->images) ? $product->images : [];
+        $this->currentVideoPath = $product->video_path;
         $this->short_description = $product->short_description;
         $this->description = $product->description;
         $this->category_id = $product->category_id;
@@ -166,6 +169,18 @@ new class extends Component
         }
     }
 
+    public function removeVideo()
+    {
+        if ($this->currentVideoPath && !str_starts_with($this->currentVideoPath, 'http')) {
+            $path = public_path(ltrim($this->currentVideoPath, '/'));
+            if (file_exists($path)) {
+                @unlink($path);
+            }
+        }
+        $this->currentVideoPath = null;
+        $this->videoFile = null;
+    }
+
     public function save()
     {
         $this->validate([
@@ -177,6 +192,7 @@ new class extends Component
             'stock' => 'required|integer|min:0',
             'imagesList' => 'required_without:imageFiles|array',
             'imageFiles.*' => 'image|max:2048',
+            'videoFile' => 'nullable|file|mimetypes:video/mp4,video/mpeg,video/quicktime,video/webm|max:20480',
             'short_description' => 'nullable|max:500',
             'description' => 'nullable|max:5000',
             'category_id' => 'required|exists:categories,id',
@@ -205,6 +221,19 @@ new class extends Component
             }
         }
 
+        // Upload video file if present
+        if ($this->videoFile) {
+            // Delete old video if exists
+            if ($this->currentVideoPath && !str_starts_with($this->currentVideoPath, 'http')) {
+                $path = public_path(ltrim($this->currentVideoPath, '/'));
+                if (file_exists($path)) {
+                    @unlink($path);
+                }
+            }
+            $path = $this->videoFile->store('products/videos', 'custom_public');
+            $this->currentVideoPath = '/uploads/' . $path;
+        }
+
         // Generate SKU if empty
         if (empty($this->sku)) {
             do {
@@ -221,6 +250,7 @@ new class extends Component
             'sale_price' => $this->sale_price ?: null,
             'stock' => $this->stock,
             'images' => $this->imagesList,
+            'video_path' => $this->currentVideoPath,
             'short_description' => $this->short_description,
             'description' => $this->description,
             'category_id' => $this->category_id,
@@ -537,6 +567,39 @@ new class extends Component
                                     </button>
                                 </div>
                             @endforeach
+                        </div>
+                    </div>
+                @endif
+            </div>
+
+            <!-- Product Video -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <h2 class="text-sm font-bold text-slate-900 border-b border-slate-100 pb-2">6. Product Video (Optional)</h2>
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Upload Local Video File (max 20MB)</label>
+                    <input type="file" wire:model="videoFile" accept="video/*" class="w-full text-xs text-slate-500 file:mr-2 file:py-1.5 file:px-3 file:rounded-xl file:border-0 file:text-xs file:font-semibold file:bg-indigo-50 file:text-indigo-700 hover:file:bg-indigo-100">
+                    @error('videoFile') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                </div>
+
+                @if($currentVideoPath)
+                    <div class="pt-2">
+                        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Active Saved Video</span>
+                        <div class="aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-200 shadow-sm relative group">
+                            <video src="{{ $currentVideoPath }}" controls class="h-full w-full object-cover"></video>
+                            <button type="button" wire:click="removeVideo" class="absolute top-2 right-2 rounded-xl bg-rose-600 hover:bg-rose-500 py-1.5 px-3 text-xs font-bold text-white shadow transition">
+                                Delete Video File
+                            </button>
+                        </div>
+                    </div>
+                @elseif($videoFile)
+                    <div class="pt-2">
+                        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400 mb-1">Video File Selected (Pending Save)</span>
+                        <div class="aspect-video w-full rounded-xl overflow-hidden bg-slate-950 border border-slate-200 shadow-sm relative">
+                            <?php try { ?>
+                                <video src="{{ $videoFile->temporaryUrl() }}" controls class="h-full w-full object-cover"></video>
+                            <?php } catch (\Throwable $e) { ?>
+                                <div class="p-4 text-center text-xs text-slate-500">Video uploaded: {{ $videoFile->getClientOriginalName() }}</div>
+                            <?php } ?>
                         </div>
                     </div>
                 @endif

@@ -151,6 +151,8 @@ new class extends Component
         selectedVariantStock: {{ $product->stock }},
         selectedVariantSku: '{{ $product->sku }}',
         lightboxOpen: false,
+        showVideo: false,
+        videoPath: '{{ $product->video_path ?? '' }}',
         init() {
             if (this.selectedVariantId) {
                 this.selectVariant(this.selectedVariantId);
@@ -168,6 +170,7 @@ new class extends Component
                 if (variant.images && variant.images.length > 0) {
                     this.activeImagesList = variant.images;
                     this.activeImage = variant.images[0];
+                    this.showVideo = false;
                 } else {
                     this.activeImagesList = this.productImages;
                     this.activeImage = this.productImages[0] ?? '';
@@ -184,10 +187,11 @@ new class extends Component
     }">
         <!-- Gallery -->
         <div class="space-y-4">
-            <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative cursor-zoom-in"
+            <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative"
+                 :class="!showVideo ? 'cursor-zoom-in' : ''"
                  x-data="{ zoom: false, x: 50, y: 50 }"
-                 @click="lightboxOpen = true"
-                 @mouseenter="zoom = true"
+                 @click="if(!showVideo) lightboxOpen = true"
+                 @mouseenter="if(!showVideo) zoom = true"
                  @mouseleave="zoom = false; x = 50; y = 50"
                  @mousemove="
                      const rect = $el.getBoundingClientRect();
@@ -195,23 +199,42 @@ new class extends Component
                      y = (($event.clientY - rect.top) / rect.height) * 100;
                  "
             >
-                <img :src="activeImage" alt="{{ $product->name }}" 
-                     class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
-                     :style="zoom ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
-                >
+                <template x-if="!showVideo">
+                    <img :src="activeImage" alt="{{ $product->name }}" 
+                         class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
+                         :style="zoom ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
+                    >
+                </template>
+                <template x-if="showVideo">
+                    <video src="{{ $product->video_path }}" controls autoplay class="h-full w-full object-contain bg-black"></video>
+                </template>
             </div>
             
             <!-- Sub-images thumbnails if any -->
-            <div class="grid grid-cols-5 gap-3" x-show="activeImagesList.length > 1">
+            <div class="flex flex-wrap gap-3">
                 <template x-for="(img, idx) in activeImagesList" :key="idx">
                     <div 
-                        @click="activeImage = img"
-                        :class="activeImage === img ? 'border-indigo-600 ring-2 ring-indigo-500/20' : 'border-slate-200'"
-                        class="aspect-square bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-600 transition duration-150"
+                        @click="activeImage = img; showVideo = false"
+                        :class="(!showVideo && activeImage === img) ? 'border-indigo-650 ring-2 ring-indigo-500/20' : 'border-slate-200'"
+                        class="h-14 w-14 bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-650 transition duration-150"
                     >
                         <img :src="img" alt="Product Image Thumbnail" class="h-full w-full object-cover">
                     </div>
                 </template>
+
+                @if($product->video_path)
+                    <div 
+                        @click="showVideo = true; activeImage = ''"
+                        :class="showVideo ? 'border-indigo-650 ring-2 ring-indigo-500/20' : 'border-slate-200'"
+                        class="h-14 w-14 bg-slate-50 border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-650 transition duration-150 flex flex-col items-center justify-center relative"
+                    >
+                        <svg class="h-5 w-5 text-indigo-650" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                            <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                        </svg>
+                        <span class="text-[8px] font-extrabold text-indigo-700 mt-0.5">Video</span>
+                    </div>
+                @endif
             </div>
         </div>
 

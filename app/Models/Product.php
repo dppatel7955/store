@@ -20,6 +20,7 @@ class Product extends Model
         'sale_price',
         'stock',
         'images',
+        'video_path',
         'is_active',
         'is_featured',
         'category_id',
