@@ -20,18 +20,8 @@ new class extends Component
     public string $newBannerUrl = '';
     public int $newBannerSortOrder = 0;
 
-    // Sliders Config Fields
-    public string $newArrivalsTitle = 'New Arrivals';
-    public string $newArrivalsSubtitle = 'Explore our latest high-performance releases.';
-    public string $newArrivalsMode = 'latest'; // latest or selected
-    public int $newArrivalsLimit = 4;
-    public array $newArrivalsProducts = [];
-
-    public string $featuredTitle = 'Featured Components';
-    public string $featuredSubtitle = 'Curated collection of high-performance hardware.';
-    public string $featuredMode = 'featured'; // featured or selected
-    public int $featuredLimit = 4;
-    public array $featuredProducts = [];
+    // Dynamic Sliders Array
+    public array $sliders = [];
 
     public function mount()
     {
@@ -51,53 +41,70 @@ new class extends Component
         $settingsPath = storage_path('app/home_settings.json');
         if (file_exists($settingsPath)) {
             $settings = json_decode(file_get_contents($settingsPath), true);
-            if ($settings) {
-                $this->newArrivalsTitle = $settings['new_arrivals_title'] ?? 'New Arrivals';
-                $this->newArrivalsSubtitle = $settings['new_arrivals_subtitle'] ?? 'Explore our latest high-performance releases.';
-                $this->newArrivalsMode = $settings['new_arrivals_mode'] ?? 'latest';
-                $this->newArrivalsLimit = (int) ($settings['new_arrivals_limit'] ?? 4);
-                $this->newArrivalsProducts = $settings['new_arrivals_products'] ?? [];
-
-                $this->featuredTitle = $settings['featured_title'] ?? 'Featured Components';
-                $this->featuredSubtitle = $settings['featured_subtitle'] ?? 'Curated collection of high-performance hardware.';
-                $this->featuredMode = $settings['featured_mode'] ?? 'featured';
-                $this->featuredLimit = (int) ($settings['featured_limit'] ?? 4);
-                $this->featuredProducts = $settings['featured_products'] ?? [];
+            if ($settings && isset($settings['sliders'])) {
+                $this->sliders = $settings['sliders'];
             }
         }
+
+        if (empty($this->sliders)) {
+            $this->sliders = [
+                [
+                    'id' => 'new_arrivals',
+                    'title' => 'New Arrivals',
+                    'subtitle' => 'Explore our latest high-performance releases.',
+                    'mode' => 'latest',
+                    'limit' => 4,
+                    'product_ids' => []
+                ],
+                [
+                    'id' => 'featured',
+                    'title' => 'Featured Components',
+                    'subtitle' => 'Curated collection of high-performance hardware.',
+                    'mode' => 'featured',
+                    'limit' => 4,
+                    'product_ids' => []
+                ]
+            ];
+        }
+    }
+
+    public function addCustomSlider()
+    {
+        $this->sliders[] = [
+            'id' => 'slider_' . time(),
+            'title' => 'New Promo Slider',
+            'subtitle' => 'Curated selection of our best computer hardware.',
+            'mode' => 'latest',
+            'limit' => 4,
+            'product_ids' => []
+        ];
+        $this->dispatch('swal', title: 'Added!', text: 'New slider section added. Set titles and save.', icon: 'success');
+    }
+
+    public function deleteSlider($index)
+    {
+        unset($this->sliders[$index]);
+        $this->sliders = array_values($this->sliders);
+        $this->dispatch('swal', title: 'Removed!', text: 'Slider section removed.', icon: 'info');
     }
 
     public function saveSliderSettings()
     {
         $this->validate([
-            'newArrivalsTitle' => 'required|string|max:255',
-            'newArrivalsSubtitle' => 'required|string|max:500',
-            'newArrivalsMode' => 'required|in:latest,selected',
-            'newArrivalsLimit' => 'required|integer|min:1|max:20',
-            'newArrivalsProducts' => 'nullable|array',
-            'featuredTitle' => 'required|string|max:255',
-            'featuredSubtitle' => 'required|string|max:500',
-            'featuredMode' => 'required|in:featured,selected',
-            'featuredLimit' => 'required|integer|min:1|max:20',
-            'featuredProducts' => 'nullable|array',
+            'sliders.*.title' => 'required|string|max:255',
+            'sliders.*.subtitle' => 'required|string|max:500',
+            'sliders.*.mode' => 'required|in:latest,featured,selected',
+            'sliders.*.limit' => 'required|integer|min:1|max:20',
+            'sliders.*.product_ids' => 'nullable|array',
         ]);
 
         $settings = [
-            'new_arrivals_title' => $this->newArrivalsTitle,
-            'new_arrivals_subtitle' => $this->newArrivalsSubtitle,
-            'new_arrivals_mode' => $this->newArrivalsMode,
-            'new_arrivals_limit' => (int) $this->newArrivalsLimit,
-            'new_arrivals_products' => $this->newArrivalsProducts,
-            'featured_title' => $this->featuredTitle,
-            'featured_subtitle' => $this->featuredSubtitle,
-            'featured_mode' => $this->featuredMode,
-            'featured_limit' => (int) $this->featuredLimit,
-            'featured_products' => $this->featuredProducts,
+            'sliders' => $this->sliders
         ];
 
         file_put_contents(storage_path('app/home_settings.json'), json_encode($settings, JSON_PRETTY_PRINT));
 
-        $this->dispatch('swal', title: 'Saved!', text: 'Slider configurations saved successfully.', icon: 'success');
+        $this->dispatch('swal', title: 'Saved!', text: 'Homepage slider sections updated successfully.', icon: 'success');
     }
 
     public function save()
@@ -174,7 +181,7 @@ new class extends Component
     <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
         <div>
             <h1 class="text-3xl font-extrabold text-slate-900">Home Settings</h1>
-            <p class="text-xs text-slate-500 mt-1">Configure layout, slider headings, banner uploads, and featured items.</p>
+            <p class="text-xs text-slate-500 mt-1">Configure layout, dynamic slider sections, banners, and featured items.</p>
         </div>
     </div>
 
@@ -350,152 +357,109 @@ new class extends Component
         </div>
     @elseif($activeTab === 'sliders')
         <form wire:submit.prevent="saveSliderSettings" class="space-y-6">
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <!-- New Arrivals Slider -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-                    <h2 class="text-lg font-bold text-slate-900 border-b border-slate-250 pb-3 flex items-center gap-2">
-                        <span class="h-2 w-2 rounded-full bg-indigo-650"></span>
-                        New Arrivals Slider
-                    </h2>
+            <div class="flex items-center justify-between border-b border-slate-200 pb-3">
+                <span class="text-xs text-slate-500 font-medium">Add, customize, or delete homepage slider sections dynamically.</span>
+                <button 
+                    type="button"
+                    wire:click="addCustomSlider"
+                    class="rounded-xl border border-indigo-600 bg-indigo-50 text-indigo-750 px-3.5 py-2 text-xs font-bold hover:bg-indigo-100 transition flex items-center gap-1.5"
+                >
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4" />
+                    </svg>
+                    Add Custom Slider Section
+                </button>
+            </div>
 
-                    <!-- Title -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Section Title</label>
-                        <input 
-                            type="text" 
-                            wire:model="newArrivalsTitle" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
-                        />
-                        @error('newArrivalsTitle') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Subtitle -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Section Subtitle</label>
-                        <textarea 
-                            rows="2" 
-                            wire:model="newArrivalsSubtitle" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
-                        ></textarea>
-                        @error('newArrivalsSubtitle') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Limit -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Display Limit</label>
-                        <input 
-                            type="number" 
-                            wire:model="newArrivalsLimit" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
-                        />
-                        @error('newArrivalsLimit') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Mode -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Product Selection Mode</label>
-                        <select 
-                            wire:model.live="newArrivalsMode"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
+            <div class="space-y-6">
+                @foreach($sliders as $idx => $slider)
+                    <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm relative">
+                        <button 
+                            type="button"
+                            wire:click="deleteSlider({{ $idx }})"
+                            wire:confirm="Are you sure you want to remove this slider section?"
+                            class="absolute top-4 right-4 text-xs font-bold text-rose-600 hover:text-rose-700 transition"
                         >
-                            <option value="latest">Latest Products (Auto-query by date)</option>
-                            <option value="selected">Choose Products (Select specific products manually)</option>
-                        </select>
-                    </div>
+                            &times; Delete Section
+                        </button>
 
-                    <!-- Products List (Only if mode is selected) -->
-                    @if($newArrivalsMode === 'selected')
-                        <div class="space-y-2">
-                            <label class="block text-xs font-semibold text-slate-500">Pick Products to Show</label>
-                            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/50 max-h-48 overflow-y-auto space-y-2">
-                                @foreach($this->allProducts as $p)
-                                    <label class="flex items-center gap-2 cursor-pointer select-none">
+                        <h2 class="text-base font-bold text-slate-900 flex items-center gap-2">
+                            <span class="h-2 w-2 rounded-full bg-indigo-650"></span>
+                            Slider Section #{{ $idx + 1 }}: {{ $slider['title'] }}
+                        </h2>
+
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Title & Subtitle -->
+                            <div class="space-y-4">
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">Section Title</label>
+                                    <input 
+                                        type="text" 
+                                        wire:model="sliders.{{ $idx }}.title" 
+                                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
+                                    />
+                                    @error("sliders.{$idx}.title") <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                                </div>
+
+                                <div>
+                                    <label class="block text-xs font-semibold text-slate-500 mb-1.5">Section Subtitle</label>
+                                    <textarea 
+                                        rows="2" 
+                                        wire:model="sliders.{{ $idx }}.subtitle" 
+                                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
+                                    ></textarea>
+                                    @error("sliders.{$idx}.subtitle") <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                                </div>
+                            </div>
+
+                            <!-- Query settings & items selection -->
+                            <div class="space-y-4">
+                                <div class="grid grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Display Limit</label>
                                         <input 
-                                            type="checkbox" 
-                                            value="{{ $p->id }}" 
-                                            wire:model="newArrivalsProducts" 
-                                            class="rounded text-indigo-600 focus:ring-indigo-600 border-slate-300"
+                                            type="number" 
+                                            wire:model="sliders.{{ $idx }}.limit" 
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
                                         />
-                                        <span class="text-xs text-slate-750 font-medium">{{ $p->name }}</span>
-                                    </label>
-                                @endforeach
+                                        @error("sliders.{$idx}.limit") <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                                    </div>
+
+                                    <div>
+                                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Query Mode</label>
+                                        <select 
+                                            wire:model.live="sliders.{{ $idx }}.mode"
+                                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
+                                        >
+                                            <option value="latest">Latest Products (Auto-query)</option>
+                                            <option value="featured">Featured Status (Auto-query)</option>
+                                            <option value="selected">Manual Selection</option>
+                                        </select>
+                                    </div>
+                                </div>
+
+                                @if($slider['mode'] === 'selected')
+                                    <div class="space-y-2">
+                                        <label class="block text-xs font-semibold text-slate-500">Pick Products to Show</label>
+                                        <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/50 max-h-36 overflow-y-auto space-y-2">
+                                            @foreach($this->allProducts as $p)
+                                                <label class="flex items-center gap-2 cursor-pointer select-none">
+                                                    <input 
+                                                        type="checkbox" 
+                                                        value="{{ $p->id }}" 
+                                                        wire:model="sliders.{{ $idx }}.product_ids" 
+                                                        class="rounded text-indigo-600 focus:ring-indigo-600 border-slate-300"
+                                                    />
+                                                    <span class="text-xs text-slate-750 font-medium">{{ $p->name }}</span>
+                                                </label>
+                                            @endforeach
+                                        </div>
+                                    </div>
+                                @endif
                             </div>
                         </div>
-                    @endif
-                </div>
-
-                <!-- Featured Slider -->
-                <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
-                    <h2 class="text-lg font-bold text-slate-900 border-b border-slate-250 pb-3 flex items-center gap-2">
-                        <span class="h-2 w-2 rounded-full bg-indigo-650"></span>
-                        Featured Products Slider
-                    </h2>
-
-                    <!-- Title -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Section Title</label>
-                        <input 
-                            type="text" 
-                            wire:model="featuredTitle" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
-                        />
-                        @error('featuredTitle') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
-
-                    <!-- Subtitle -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Section Subtitle</label>
-                        <textarea 
-                            rows="2" 
-                            wire:model="featuredSubtitle" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
-                        ></textarea>
-                        @error('featuredSubtitle') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Limit -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Display Limit</label>
-                        <input 
-                            type="number" 
-                            wire:model="featuredLimit" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
-                        />
-                        @error('featuredLimit') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
-                    </div>
-
-                    <!-- Mode -->
-                    <div>
-                        <label class="block text-xs font-semibold text-slate-500 mb-1.5">Product Selection Mode</label>
-                        <select 
-                            wire:model.live="featuredMode"
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600 transition"
-                        >
-                            <option value="featured">Featured Tag (Auto-query by Featured status)</option>
-                            <option value="selected">Choose Products (Select specific products manually)</option>
-                        </select>
-                    </div>
-
-                    <!-- Products List (Only if mode is selected) -->
-                    @if($featuredMode === 'selected')
-                        <div class="space-y-2">
-                            <label class="block text-xs font-semibold text-slate-500">Pick Products to Show</label>
-                            <div class="border border-slate-200 rounded-xl p-3 bg-slate-50/50 max-h-48 overflow-y-auto space-y-2">
-                                @foreach($this->allProducts as $p)
-                                    <label class="flex items-center gap-2 cursor-pointer select-none">
-                                        <input 
-                                            type="checkbox" 
-                                            value="{{ $p->id }}" 
-                                            wire:model="featuredProducts" 
-                                            class="rounded text-indigo-600 focus:ring-indigo-600 border-slate-300"
-                                        />
-                                        <span class="text-xs text-slate-750 font-medium">{{ $p->name }}</span>
-                                    </label>
-                                @endforeach
-                            </div>
-                        </div>
-                    @endif
-                </div>
+                @endforeach
             </div>
 
             <!-- Footer Save -->

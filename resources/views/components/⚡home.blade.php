@@ -11,10 +11,8 @@ new class extends Component
 {
     public $categories = [];
     public $brands = [];
-    public $featuredProducts = [];
-    public $newArrivals = [];
     public array $banners = [];
-    public array $homeSettings = [];
+    public array $slidersData = [];
 
     public function mount()
     {
@@ -29,54 +27,68 @@ new class extends Component
 
         // Default slider settings
         $settingsPath = storage_path('app/home_settings.json');
-        $homeSettings = [
-            'new_arrivals_title' => 'New Arrivals',
-            'new_arrivals_subtitle' => 'Explore our latest high-performance releases.',
-            'new_arrivals_mode' => 'latest',
-            'new_arrivals_limit' => 4,
-            'new_arrivals_products' => [],
-            'featured_title' => 'Featured Components',
-            'featured_subtitle' => 'Curated collection of high-performance hardware.',
-            'featured_mode' => 'featured',
-            'featured_limit' => 4,
-            'featured_products' => [],
-        ];
-
+        $sliders = [];
         if (file_exists($settingsPath)) {
-            $homeSettings = array_merge($homeSettings, json_decode(file_get_contents($settingsPath), true) ?: []);
-        }
-        $this->homeSettings = $homeSettings;
-
-        // Fetch Featured Products
-        if ($homeSettings['featured_mode'] === 'selected' && !empty($homeSettings['featured_products'])) {
-            $this->featuredProducts = Product::with('brand')
-                ->whereIn('id', $homeSettings['featured_products'])
-                ->where('is_active', true)
-                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
-                ->get();
-        } else {
-            $this->featuredProducts = Product::with('brand')
-                ->where('is_active', true)
-                ->where('is_featured', true)
-                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
-                ->limit($homeSettings['featured_limit'])
-                ->get();
+            $settings = json_decode(file_get_contents($settingsPath), true);
+            if ($settings && isset($settings['sliders'])) {
+                $sliders = $settings['sliders'];
+            }
         }
 
-        // Fetch New Arrivals
-        if ($homeSettings['new_arrivals_mode'] === 'selected' && !empty($homeSettings['new_arrivals_products'])) {
-            $this->newArrivals = Product::with('brand')
-                ->whereIn('id', $homeSettings['new_arrivals_products'])
-                ->where('is_active', true)
-                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
-                ->get();
-        } else {
-            $this->newArrivals = Product::with('brand')
-                ->where('is_active', true)
-                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
-                ->orderBy('created_at', 'desc')
-                ->limit($homeSettings['new_arrivals_limit'])
-                ->get();
+        if (empty($sliders)) {
+            $sliders = [
+                [
+                    'id' => 'new_arrivals',
+                    'title' => 'New Arrivals',
+                    'subtitle' => 'Explore our latest high-performance releases.',
+                    'mode' => 'latest',
+                    'limit' => 4,
+                    'product_ids' => []
+                ],
+                [
+                    'id' => 'featured',
+                    'title' => 'Featured Components',
+                    'subtitle' => 'Curated collection of high-performance hardware.',
+                    'mode' => 'featured',
+                    'limit' => 4,
+                    'product_ids' => []
+                ]
+            ];
+        }
+
+        $this->slidersData = [];
+        foreach ($sliders as $slider) {
+            $products = [];
+            if ($slider['mode'] === 'selected') {
+                $products = Product::with('brand')
+                    ->whereIn('id', $slider['product_ids'] ?? [])
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                    ->get();
+            } elseif ($slider['mode'] === 'featured') {
+                $products = Product::with('brand')
+                    ->where('is_active', true)
+                    ->where('is_featured', true)
+                    ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                    ->limit($slider['limit'])
+                    ->get();
+            } else { // latest
+                $products = Product::with('brand')
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                    ->orderBy('created_at', 'desc')
+                    ->limit($slider['limit'])
+                    ->get();
+            }
+
+            if ($products->count() > 0) {
+                $this->slidersData[] = [
+                    'id' => $slider['id'],
+                    'title' => $slider['title'],
+                    'subtitle' => $slider['subtitle'],
+                    'products' => $products
+                ];
+            }
         }
 
         // Fetch active banners sorted by sort order
@@ -183,91 +195,91 @@ new class extends Component
         @endif
     </section>
 
-    <!-- New Arrivals Section -->
-    <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-end justify-between mb-8">
-            <div>
-                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{{ $homeSettings['new_arrivals_title'] }}</h2>
-                <p class="text-sm text-slate-500 mt-1">{{ $homeSettings['new_arrivals_subtitle'] }}</p>
+    <!-- First Dynamic Slider Section -->
+    @if(isset($slidersData[0]))
+        @php $slider = $slidersData[0]; @endphp
+        <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-end justify-between mb-8">
+                <div>
+                    <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{{ $slider['title'] }}</h2>
+                    <p class="text-sm text-slate-500 mt-1">{{ $slider['subtitle'] }}</p>
+                </div>
             </div>
-            <a href="/shop?sort=latest" class="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition">
-                View All &rarr;
-            </a>
-        </div>
 
-        <div x-data="{
-            scrollContainer: null,
-            scrollInterval: null,
-            init() {
-                this.scrollContainer = this.$refs.newArrivalsSlider;
-                this.scrollInterval = setInterval(() => {
-                    if (window.innerWidth < 640 && this.scrollContainer) {
-                        let maxScroll = this.scrollContainer.scrollWidth - this.scrollContainer.clientWidth;
-                        if (this.scrollContainer.scrollLeft >= maxScroll - 10) {
-                            this.scrollContainer.scrollTo({ left: 0, behavior: 'smooth' });
-                        } else {
-                            this.scrollContainer.scrollBy({ left: 234, behavior: 'smooth' });
+            <div x-data="{
+                scrollContainer: null,
+                scrollInterval: null,
+                init() {
+                    this.scrollContainer = this.$refs.sliderContainer0;
+                    this.scrollInterval = setInterval(() => {
+                        if (window.innerWidth < 640 && this.scrollContainer) {
+                            let maxScroll = this.scrollContainer.scrollWidth - this.scrollContainer.clientWidth;
+                            if (this.scrollContainer.scrollLeft >= maxScroll - 10) {
+                                this.scrollContainer.scrollTo({ left: 0, behavior: 'smooth' });
+                            } else {
+                                this.scrollContainer.scrollBy({ left: 234, behavior: 'smooth' });
+                            }
                         }
-                    }
-                }, 4000);
-            },
-            destroy() {
-                if (this.scrollInterval) clearInterval(this.scrollInterval);
-            }
-        }" class="relative w-full">
-            <div x-ref="newArrivalsSlider" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-x-visible sm:pb-0 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                @foreach($newArrivals as $prod)
-                    <div class="group relative bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-lg transition duration-300 flex flex-col h-full snap-start shrink-0 w-[210px] sm:w-auto">
-                        <!-- Product Link Wrapper (wraps image and text details) -->
-                        <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
-                            <!-- Image -->
-                            <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
-                                <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
-                                @if($prod->sale_price)
-                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
-                                        {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
-                                    </span>
-                                @endif
-                            </div>
-                            <!-- Details -->
-                            <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
-                                <div>
-                                    <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name ?? '' }}</span>
-                                    <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 group-hover:text-indigo-650 transition">
-                                        {{ $prod->name }}
-                                    </h3>
-                                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ strip_tags($prod->short_description) }}</p>
+                    }, 4000);
+                },
+                destroy() {
+                    if (this.scrollInterval) clearInterval(this.scrollInterval);
+                }
+            }" class="relative w-full">
+                <div x-ref="sliderContainer0" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-x-visible sm:pb-0 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    @foreach($slider['products'] as $prod)
+                        <div class="group relative bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-lg transition duration-300 flex flex-col h-full snap-start shrink-0 w-[210px] sm:w-auto">
+                            <!-- Product Link Wrapper -->
+                            <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
+                                <!-- Image -->
+                                <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
+                                    <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
+                                    @if($prod->sale_price)
+                                        <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                            {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
+                                        </span>
+                                    @endif
                                 </div>
-                                <div class="mt-3 sm:mt-4">
-                                    <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
-                                        @if($prod->sale_price)
-                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                            <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
-                                        @else
-                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
-                                        @endif
+                                <!-- Details -->
+                                <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
+                                    <div>
+                                        <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name ?? '' }}</span>
+                                        <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 group-hover:text-indigo-650 transition">
+                                            {{ $prod->name }}
+                                        </h3>
+                                        <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ strip_tags($prod->short_description) }}</p>
+                                    </div>
+                                    <div class="mt-3 sm:mt-4">
+                                        <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                                            @if($prod->sale_price)
+                                                <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
+                                                <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                            @else
+                                                <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
+                                            @endif
+                                        </div>
                                     </div>
                                 </div>
+                            </a>
+                            
+                            <!-- Add to Cart -->
+                            <div class="px-3.5 pb-3.5 sm:px-5 sm:pb-5">
+                                <button 
+                                    wire:click="addToCart({{ $prod->id }})"
+                                    class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
+                                >
+                                    <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                    </svg>
+                                    Add to Cart
+                                </button>
                             </div>
-                        </a>
-                        
-                        <!-- Add to Cart -->
-                        <div class="px-3.5 pb-3.5 sm:px-5 sm:pb-5">
-                            <button 
-                                wire:click="addToCart({{ $prod->id }})"
-                                class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
-                            >
-                                <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                Add to Cart
-                            </button>
                         </div>
-                    </div>
-                @endforeach
+                    @endforeach
+                </div>
             </div>
-        </div>
-    </section>
+        </section>
+    @endif
 
     <!-- Categories Grid -->
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -368,91 +380,92 @@ new class extends Component
         </div>
     </section>
 
-    <!-- Featured Products -->
-    <section id="featured" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <div class="flex items-end justify-between mb-8">
-            <div>
-                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{{ $homeSettings['featured_title'] }}</h2>
-                <p class="text-sm text-slate-500 mt-1">{{ $homeSettings['featured_subtitle'] }}</p>
-            </div>
-            <a href="/shop" class="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition">
-                View All &rarr;
-            </a>
-        </div>
+    <!-- Other Dynamic Slider Sections -->
+    @foreach($slidersData as $sliderIndex => $slider)
+        @if($sliderIndex >= 1)
+            <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="flex items-end justify-between mb-8">
+                    <div>
+                        <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{{ $slider['title'] }}</h2>
+                        <p class="text-sm text-slate-500 mt-1">{{ $slider['subtitle'] }}</p>
+                    </div>
+                </div>
 
-        <div x-data="{
-            scrollContainer: null,
-            scrollInterval: null,
-            init() {
-                this.scrollContainer = this.$refs.featuredSlider;
-                this.scrollInterval = setInterval(() => {
-                    if (window.innerWidth < 640 && this.scrollContainer) {
-                        let maxScroll = this.scrollContainer.scrollWidth - this.scrollContainer.clientWidth;
-                        if (this.scrollContainer.scrollLeft >= maxScroll - 10) {
-                            this.scrollContainer.scrollTo({ left: 0, behavior: 'smooth' });
-                        } else {
-                            this.scrollContainer.scrollBy({ left: 234, behavior: 'smooth' });
-                        }
+                <div x-data="{
+                    scrollContainer: null,
+                    scrollInterval: null,
+                    init() {
+                        this.scrollContainer = this.$refs.sliderContainer{{ $sliderIndex }};
+                        this.scrollInterval = setInterval(() => {
+                            if (window.innerWidth < 640 && this.scrollContainer) {
+                                let maxScroll = this.scrollContainer.scrollWidth - this.scrollContainer.clientWidth;
+                                if (this.scrollContainer.scrollLeft >= maxScroll - 10) {
+                                    this.scrollContainer.scrollTo({ left: 0, behavior: 'smooth' });
+                                } else {
+                                    this.scrollContainer.scrollBy({ left: 234, behavior: 'smooth' });
+                                }
+                            }
+                        }, 4000);
+                    },
+                    destroy() {
+                        if (this.scrollInterval) clearInterval(this.scrollInterval);
                     }
-                }, 4000);
-            },
-            destroy() {
-                if (this.scrollInterval) clearInterval(this.scrollInterval);
-            }
-        }" class="relative w-full">
-            <div x-ref="featuredSlider" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-x-visible sm:pb-0 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
-                @foreach($featuredProducts as $prod)
-                    <div class="group relative bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-lg transition duration-300 flex flex-col h-full snap-start shrink-0 w-[210px] sm:w-auto">
-                        <!-- Product Link Wrapper (wraps image and text details) -->
-                        <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
-                            <!-- Image -->
-                            <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
-                                <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
-                                @if($prod->sale_price)
-                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
-                                        {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
-                                    </span>
-                                @endif
-                            </div>
-                            <!-- Details -->
-                            <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
-                                <div>
-                                    <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name }}</span>
-                                    <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 group-hover:text-indigo-650 transition">
-                                        {{ $prod->name }}
-                                    </h3>
-                                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ strip_tags($prod->short_description) }}</p>
-                                </div>
-                                <div class="mt-3 sm:mt-4">
-                                    <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                }" class="relative w-full">
+                    <div x-ref="sliderContainer{{ $sliderIndex }}" class="flex overflow-x-auto snap-x snap-mandatory gap-6 pb-4 sm:grid sm:grid-cols-2 md:grid-cols-4 sm:overflow-x-visible sm:pb-0 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                        @foreach($slider['products'] as $prod)
+                            <div class="group relative bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-lg transition duration-300 flex flex-col h-full snap-start shrink-0 w-[210px] sm:w-auto">
+                                <!-- Product Link Wrapper -->
+                                <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
+                                    <!-- Image -->
+                                    <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
+                                        <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                         @if($prod->sale_price)
-                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                            <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
-                                        @else
-                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
+                                            <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                                {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
+                                            </span>
                                         @endif
                                     </div>
+                                    <!-- Details -->
+                                    <div class="p-3.5 sm:p-5 flex-1 flex flex-col justify-between">
+                                        <div>
+                                            <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name ?? '' }}</span>
+                                            <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 group-hover:text-indigo-650 transition">
+                                                {{ $prod->name }}
+                                            </h3>
+                                            <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ strip_tags($prod->short_description) }}</p>
+                                        </div>
+                                        <div class="mt-3 sm:mt-4">
+                                            <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                                                @if($prod->sale_price)
+                                                    <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
+                                                    <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                                @else
+                                                    <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
+                                                @endif
+                                            </div>
+                                        </div>
+                                    </div>
+                                </a>
+                                
+                                <!-- Add to Cart -->
+                                <div class="px-3.5 pb-3.5 sm:px-5 sm:pb-5">
+                                    <button 
+                                        wire:click="addToCart({{ $prod->id }})"
+                                        class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
+                                    >
+                                        <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                        </svg>
+                                        Add to Cart
+                                    </button>
                                 </div>
                             </div>
-                        </a>
-                        
-                        <!-- Add to Cart -->
-                        <div class="px-3.5 pb-3.5 sm:px-5 sm:pb-5">
-                            <button 
-                                wire:click="addToCart({{ $prod->id }})"
-                                class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
-                            >
-                                <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                </svg>
-                                Add to Cart
-                            </button>
-                        </div>
+                        @endforeach
                     </div>
-                @endforeach
-            </div>
-        </div>
-    </section>
+                </div>
+            </section>
+        @endif
+    @endforeach
 
 
 </div>
