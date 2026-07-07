@@ -14,6 +14,7 @@ new class extends Component
     public $featuredProducts = [];
     public $newArrivals = [];
     public array $banners = [];
+    public array $homeSettings = [];
 
     public function mount()
     {
@@ -26,20 +27,57 @@ new class extends Component
             ->select(['id', 'name', 'slug', 'logo'])
             ->get();
 
-        $this->featuredProducts = Product::with('brand')
-            ->where('is_active', true)
-            ->where('is_featured', true)
-            ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
-            ->limit(4)
-            ->get();
+        // Default slider settings
+        $settingsPath = storage_path('app/home_settings.json');
+        $homeSettings = [
+            'new_arrivals_title' => 'New Arrivals',
+            'new_arrivals_subtitle' => 'Explore our latest high-performance releases.',
+            'new_arrivals_mode' => 'latest',
+            'new_arrivals_limit' => 4,
+            'new_arrivals_products' => [],
+            'featured_title' => 'Featured Components',
+            'featured_subtitle' => 'Curated collection of high-performance hardware.',
+            'featured_mode' => 'featured',
+            'featured_limit' => 4,
+            'featured_products' => [],
+        ];
 
-        // Fetch newest arrivals
-        $this->newArrivals = Product::with('brand')
-            ->where('is_active', true)
-            ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
-            ->orderBy('created_at', 'desc')
-            ->limit(4)
-            ->get();
+        if (file_exists($settingsPath)) {
+            $homeSettings = array_merge($homeSettings, json_decode(file_get_contents($settingsPath), true) ?: []);
+        }
+        $this->homeSettings = $homeSettings;
+
+        // Fetch Featured Products
+        if ($homeSettings['featured_mode'] === 'selected' && !empty($homeSettings['featured_products'])) {
+            $this->featuredProducts = Product::with('brand')
+                ->whereIn('id', $homeSettings['featured_products'])
+                ->where('is_active', true)
+                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                ->get();
+        } else {
+            $this->featuredProducts = Product::with('brand')
+                ->where('is_active', true)
+                ->where('is_featured', true)
+                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                ->limit($homeSettings['featured_limit'])
+                ->get();
+        }
+
+        // Fetch New Arrivals
+        if ($homeSettings['new_arrivals_mode'] === 'selected' && !empty($homeSettings['new_arrivals_products'])) {
+            $this->newArrivals = Product::with('brand')
+                ->whereIn('id', $homeSettings['new_arrivals_products'])
+                ->where('is_active', true)
+                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                ->get();
+        } else {
+            $this->newArrivals = Product::with('brand')
+                ->where('is_active', true)
+                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                ->orderBy('created_at', 'desc')
+                ->limit($homeSettings['new_arrivals_limit'])
+                ->get();
+        }
 
         // Fetch active banners sorted by sort order
         $this->banners = Banner::where('is_active', true)
@@ -149,8 +187,8 @@ new class extends Component
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-end justify-between mb-8">
             <div>
-                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">New Arrivals</h2>
-                <p class="text-sm text-slate-500 mt-1">Fresh arrivals of our newest premium computer components.</p>
+                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{{ $homeSettings['new_arrivals_title'] }}</h2>
+                <p class="text-sm text-slate-500 mt-1">{{ $homeSettings['new_arrivals_subtitle'] }}</p>
             </div>
             <a href="/shop?sort=latest" class="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition">
                 View All &rarr;
@@ -334,8 +372,8 @@ new class extends Component
     <section id="featured" class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="flex items-end justify-between mb-8">
             <div>
-                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">Featured Products</h2>
-                <p class="text-sm text-slate-500 mt-1">Handpicked hot picks recommended just for you.</p>
+                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">{{ $homeSettings['featured_title'] }}</h2>
+                <p class="text-sm text-slate-500 mt-1">{{ $homeSettings['featured_subtitle'] }}</p>
             </div>
             <a href="/shop" class="text-xs font-bold text-indigo-600 hover:text-indigo-500 transition">
                 View All &rarr;
