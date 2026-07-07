@@ -7,8 +7,13 @@
 
     @php
         $slug = request()->route('slug');
+        $product = null;
+        if (request()->routeIs('shop.detail') && $slug) {
+            $product = \App\Models\Product::where('slug', $slug)->first();
+        }
+
         $seoTitle = $title ?? match(true) {
-            request()->is('shop/*') && $slug => ucwords(str_replace('-', ' ', $slug)),
+            $product !== null => $product->name . ' - Saffron Store',
             request()->is('shop') => 'Shop Premium Products - Saffron Store',
             request()->is('checkout') => 'Checkout - Saffron Store',
             request()->is('orders*') => 'My Orders - Saffron Store',
@@ -17,16 +22,54 @@
         };
 
         $seoDesc = $metaDescription ?? match(true) {
-            request()->is('shop/*') && $slug => 'Buy ' . ucwords(str_replace('-', ' ', $slug)) . ' at Saffron Store. Check reviews, stock levels, and specs.',
+            $product !== null => $product->short_description ? strip_tags($product->short_description) : 'Buy ' . $product->name . ' at Saffron Store. Check reviews, stock levels, and specs.',
             request()->is('shop') => 'Browse premium products, hot deals, and exclusive catalogs with quick shipping.',
             request()->is('checkout') => 'Secure checkout portal for Saffron Store purchases.',
             request()->is('orders*') => 'Track your placed orders, invoices, and shipment status.',
             default => 'Discover premium products at Saffron Store. Fast deliveries, secure payments, and expert local customer service.'
         };
+
+        $seoImage = '';
+        if ($product !== null && is_array($product->images) && count($product->images) > 0) {
+            $firstImg = $product->images[0];
+            $seoImage = str_starts_with($firstImg, 'http') ? $firstImg : asset($firstImg);
+        } else {
+            try {
+                $settingsPath = storage_path('app/home_settings.json');
+                if (file_exists($settingsPath)) {
+                    $settings = json_decode(file_get_contents($settingsPath), true);
+                    if (!empty($settings['banner_image'])) {
+                        $seoImage = asset($settings['banner_image']);
+                    }
+                }
+            } catch (\Throwable $e) {}
+        }
     @endphp
 
     <title>{{ $seoTitle }}</title>
     <meta name="description" content="{{ $seoDesc }}">
+
+    <!-- Open Graph / Facebook / Instagram / WhatsApp / Messages -->
+    <meta property="og:type" content="website">
+    <meta property="og:url" content="{{ url()->current() }}">
+    <meta property="og:title" content="{{ $seoTitle }}">
+    <meta property="og:description" content="{{ $seoDesc }}">
+    @if(!empty($seoImage))
+        <meta property="og:image" content="{{ $seoImage }}">
+        <meta property="og:image:secure_url" content="{{ $seoImage }}">
+        <meta property="og:image:type" content="image/jpeg">
+        <meta property="og:image:width" content="1200">
+        <meta property="og:image:height" content="630">
+    @endif
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image">
+    <meta name="twitter:url" content="{{ url()->current() }}">
+    <meta name="twitter:title" content="{{ $seoTitle }}">
+    <meta name="twitter:description" content="{{ $seoDesc }}">
+    @if(!empty($seoImage))
+        <meta name="twitter:image" content="{{ $seoImage }}">
+    @endif
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
