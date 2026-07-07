@@ -34,7 +34,7 @@
         <div class="flex flex-col sm:flex-row justify-between items-start gap-6 border-b border-slate-200 pb-8 mb-8">
             <div>
                 <h1 class="text-3xl font-black text-slate-900 tracking-tight">SAFFRON STORE</h1>
-                <p class="text-xs text-slate-500 mt-1.5">Flagship Enterprise Hardware Components Distributor</p>
+                <p class="text-xs text-slate-500 mt-1.5">Premium Multi-Category E-Commerce Outlet</p>
                 <p class="text-xs text-slate-450 mt-1">support@saffronstore.com &bull; +1 (800) 555-0199</p>
             </div>
             <div class="sm:text-right">

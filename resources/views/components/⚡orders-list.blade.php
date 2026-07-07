@@ -135,7 +135,7 @@ new class extends Component
                 </svg>
             </div>
             <h3 class="text-base font-bold text-slate-805">No orders yet</h3>
-            <p class="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">You haven't placed any purchases with saffron store. Explore our catalog to buy flagship hardware components!</p>
+            <p class="text-xs text-slate-500 mt-1.5 max-w-sm mx-auto leading-relaxed">You haven\'t placed any purchases with saffron store. Explore our catalog to shop our premium products!</p>
             <a 
                 href="/shop" 
                 class="mt-6 inline-flex items-center justify-center rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition"

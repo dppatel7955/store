@@ -9,19 +9,19 @@
         $slug = request()->route('slug');
         $seoTitle = $title ?? match(true) {
             request()->is('shop/*') && $slug => ucwords(str_replace('-', ' ', $slug)),
-            request()->is('shop') => 'Shop Premium Hardware Components - Saffron Store',
+            request()->is('shop') => 'Shop Premium Products - Saffron Store',
             request()->is('checkout') => 'Checkout - Saffron Store',
             request()->is('orders*') => 'My Orders - Saffron Store',
             request()->is('login') => 'Login - Saffron Store',
-            default => 'Saffron Store - High-Performance Computer Hardware'
+            default => 'Saffron Store - Premium Online Shopping Hub'
         };
 
         $seoDesc = $metaDescription ?? match(true) {
-            request()->is('shop/*') && $slug => 'Buy ' . ucwords(str_replace('-', ' ', $slug)) . ' at Saffron Store. Check reviews, stock levels, and technical specs.',
-            request()->is('shop') => 'Browse high-quality graphics cards, CPUs, RAMs, SSDs, and motherboard parts with quick local shipping.',
+            request()->is('shop/*') && $slug => 'Buy ' . ucwords(str_replace('-', ' ', $slug)) . ' at Saffron Store. Check reviews, stock levels, and specs.',
+            request()->is('shop') => 'Browse premium products, hot deals, and exclusive catalogs with quick shipping.',
             request()->is('checkout') => 'Secure checkout portal for Saffron Store purchases.',
             request()->is('orders*') => 'Track your placed orders, invoices, and shipment status.',
-            default => 'Discover premium, high-performance computer hardware components at Saffron Store. Fast deliveries, secure payments, and expert local customer service.'
+            default => 'Discover premium products at Saffron Store. Fast deliveries, secure payments, and expert local customer service.'
         };
     @endphp
 

@@ -125,7 +125,7 @@ new class extends Component
     <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
         <div>
             <h1 class="text-3xl font-extrabold text-slate-900">Catalog Shop</h1>
-            <p class="text-sm text-slate-500 mt-1">Discover, filter, and buy premium hardware products.</p>
+            <p class="text-sm text-slate-500 mt-1">Discover, filter, and shop premium products at great prices.</p>
         </div>
         <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
             <div class="relative w-full sm:w-72">

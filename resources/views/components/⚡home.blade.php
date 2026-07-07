@@ -178,7 +178,7 @@ new class extends Component
             <!-- Clean Centered Hero Layout (Fallback when no banners are loaded) -->
             <div class="w-full py-20 text-center bg-gradient-to-tr from-slate-900 via-indigo-950 to-purple-950 text-white flex flex-col items-center justify-center space-y-4 px-4 shadow-inner">
                 <span class="inline-flex items-center rounded-full bg-white/10 px-3 py-1 text-xs font-bold text-indigo-200">
-                    Premium Hardware & Tech
+                    Premium Quality Products
                 </span>
                 <h1 class="text-3xl sm:text-5xl font-extrabold tracking-tight text-white max-w-2xl leading-tight">
                     Unleash the Future of Digital Shopping
@@ -285,7 +285,7 @@ new class extends Component
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div class="text-center md:text-left mb-8">
             <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">Browse Categories</h2>
-            <p class="text-sm text-slate-500 mt-1">Find products in our curated technological categories.</p>
+            <p class="text-sm text-slate-500 mt-1">Find products in our categories.</p>
         </div>
         <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
             @foreach($categories as $cat)
@@ -330,7 +330,7 @@ new class extends Component
     <section class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
         <div class="text-center max-w-3xl mx-auto mb-10 space-y-2">
             <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight text-slate-900">Why Choose Us</h2>
-            <p class="text-xs sm:text-sm text-slate-500">We set the gold standard in premium hardware components and customer shopping experiences.</p>
+            <p class="text-xs sm:text-sm text-slate-500">We set the gold standard in premium products and customer shopping experiences.</p>
         </div>
 
         <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
@@ -342,7 +342,7 @@ new class extends Component
                     </svg>
                 </div>
                 <h3 class="text-sm font-bold text-slate-800">Super Fast Delivery</h3>
-                <p class="text-xs text-slate-500 leading-relaxed">Free, insured express shipping on all flagship component orders over ₹50,000.</p>
+                <p class="text-xs text-slate-500 leading-relaxed">Free, insured express shipping on all premium store orders over ₹5,000.</p>
             </div>
 
             <!-- Advantage 2 -->
@@ -352,8 +352,8 @@ new class extends Component
                         <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                     </svg>
                 </div>
-                <h3 class="text-sm font-bold text-slate-800">100% Genuine Tech</h3>
-                <p class="text-xs text-slate-500 leading-relaxed">Direct manufacturer warranties, authentic batch validation, and certified stock quality.</p>
+                <h3 class="text-sm font-bold text-slate-800">100% Genuine Products</h3>
+                <p class="text-xs text-slate-500 leading-relaxed">Direct manufacturer warranties, authentic quality validation, and certified product stocks.</p>
             </div>
 
             <!-- Advantage 3 -->

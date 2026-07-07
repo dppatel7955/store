@@ -58,8 +58,8 @@ new class extends Component
                 ],
                 [
                     'id' => 'featured',
-                    'title' => 'Featured Components',
-                    'subtitle' => 'Curated collection of high-performance hardware.',
+                    'title' => 'Featured Products',
+                    'subtitle' => 'Curated collection of our best premium products.',
                     'mode' => 'featured',
                     'limit' => 4,
                     'product_ids' => []
@@ -73,7 +73,7 @@ new class extends Component
         $this->sliders[] = [
             'id' => 'slider_' . time(),
             'title' => 'New Promo Slider',
-            'subtitle' => 'Curated selection of our best computer hardware.',
+            'subtitle' => 'Curated selection of our best products.',
             'mode' => 'latest',
             'limit' => 4,
             'product_ids' => []

@@ -11,9 +11,9 @@
                 <p>All orders are processed within 1-2 business days. Orders are not shipped or delivered on weekends or holidays. If we are experiencing a high volume of orders, shipments may be delayed by a few days. In the event of a significant delay, we will contact you via email.</p>
 
                 <h2 class="text-lg font-bold text-slate-800 pt-4">2. Shipping Rates and Delivery Estimates</h2>
-                <p>Shipping charges for your order will be calculated and displayed at checkout. We provide free express shipping for all orders containing premium components totaling above ₹50,000.</p>
+                <p>Shipping charges for your order will be calculated and displayed at checkout. We provide free standard shipping for all premium orders totaling above ₹5,000.</p>
                 <ul class="list-disc pl-5 space-y-1">
-                    <li><strong>Standard Delivery:</strong> 3-5 business days (Free for orders above ₹50,000, otherwise flat ₹150).</li>
+                    <li><strong>Standard Delivery:</strong> 3-5 business days (Free for orders above ₹5,000, otherwise flat ₹150).</li>
                     <li><strong>Express Delivery:</strong> 1-2 business days (Flat ₹350).</li>
                 </ul>
 
