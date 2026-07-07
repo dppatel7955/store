@@ -478,6 +478,66 @@ new class extends Component
                         </button>
                     </div>
                 </div>
+
+                <!-- Product Share Options -->
+                <div class="pt-6 border-t border-slate-200 mt-6 space-y-3" x-data="{
+                    shareUrl: window.location.href,
+                    shareTitle: '{{ addslashes($product->name) }}',
+                    copyText: 'Copy Link',
+                    copyToClipboard() {
+                        navigator.clipboard.writeText(this.shareUrl);
+                        this.copyText = 'Copied!';
+                        setTimeout(() => this.copyText = 'Copy Link', 2000);
+                        this.$dispatch('swal', {title: 'Link Copied!', text: 'Product link copied to clipboard.', icon: 'success'});
+                    }
+                }">
+                    <span class="block text-xs font-bold text-slate-800 uppercase tracking-wider">Share Product</span>
+                    <div class="flex flex-wrap gap-2">
+                        <!-- WhatsApp -->
+                        <a :href="'https://api.whatsapp.com/send?text=' + encodeURIComponent(shareTitle + ' - ' + shareUrl)" 
+                           target="_blank" 
+                           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:border-emerald-500 hover:bg-emerald-50/30 px-3 py-2 text-xs font-bold text-slate-700 transition duration-150"
+                        >
+                            <svg class="h-4 w-4 text-emerald-650" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946C.06 5.348 5.397.01 12.008.01c3.202.001 6.212 1.246 8.477 3.514 2.266 2.268 3.507 5.28 3.505 8.484-.004 6.657-5.34 11.997-11.953 11.997-2.005-.001-3.973-.502-5.724-1.455L0 24zm6.59-4.846c1.6.95 3.188 1.449 4.825 1.451 5.436 0 9.86-4.42 9.864-9.864.002-2.637-1.03-5.115-2.908-6.995-1.878-1.879-4.361-2.912-7-2.914-5.437 0-9.862 4.42-9.866 9.863-.002 1.76.474 3.479 1.38 5.013l-.936 3.42 3.505-.919zm11.234-6.401c-.302-.152-1.791-.883-2.068-.983-.277-.1-.478-.152-.679.152-.201.304-.776.983-.951 1.185-.175.203-.35.228-.652.076-.302-.152-1.274-.469-2.427-1.496-.897-.8-1.502-1.788-1.678-2.09-.175-.302-.019-.465.133-.615.136-.135.302-.35.453-.526.151-.177.201-.302.302-.503.101-.201.05-.378-.025-.529-.075-.152-.679-1.636-.931-2.24-.245-.589-.496-.51-.679-.51-.175-.008-.378-.01-.58-.01-.202 0-.531.076-.807.38-.277.304-1.058 1.036-1.058 2.528 0 1.492 1.084 2.934 1.235 3.136.152.201 2.133 3.256 5.166 4.566.721.312 1.285.499 1.724.639.724.23 1.384.198 1.905.12.58-.088 1.791-.733 2.043-1.442.252-.709.252-1.315.176-1.442-.076-.127-.277-.203-.58-.354z"/>
+                            </svg>
+                            WhatsApp
+                        </a>
+                        
+                        <!-- Telegram -->
+                        <a :href="'https://t.me/share/url?url=' + encodeURIComponent(shareUrl) + '&text=' + encodeURIComponent(shareTitle)" 
+                           target="_blank" 
+                           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:border-sky-500 hover:bg-sky-50/30 px-3 py-2 text-xs font-bold text-slate-700 transition duration-150"
+                        >
+                            <svg class="h-4 w-4 text-sky-500" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm4.64 6.8c-.15 1.58-.8 5.42-1.13 7.19-.14.75-.42 1-.68 1.03-.58.05-1.02-.38-1.58-.75-.88-.58-1.38-.94-2.23-1.5-1-.65-.35-1 .22-1.59.15-.15 2.71-2.48 2.76-2.69.01-.03.01-.14-.07-.2-.08-.06-.19-.04-.27-.02-.12.02-1.96 1.24-5.54 3.65-.52.36-.99.53-1.4.52-.46-.01-1.34-.26-2-.48-.8-.27-1.44-.42-1.39-.89.03-.25.38-.51 1.06-.78 4.16-1.8 6.94-3 8.33-3.57 3.96-1.63 4.79-1.92 5.33-1.93.12 0 .38.03.55.17.14.12.18.28.2.45-.02.09-.02.19-.04.28z"/>
+                            </svg>
+                            Telegram
+                        </a>
+                        
+                        <!-- Facebook -->
+                        <a :href="'https://www.facebook.com/sharer/sharer.php?u=' + encodeURIComponent(shareUrl)" 
+                           target="_blank" 
+                           class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:border-blue-600 hover:bg-blue-50/30 px-3 py-2 text-xs font-bold text-slate-700 transition duration-150"
+                        >
+                            <svg class="h-4 w-4 text-blue-600" fill="currentColor" viewBox="0 0 24 24">
+                                <path d="M22.675 0h-21.35c-.732 0-1.325.593-1.325 1.325v21.351c0 .731.593 1.324 1.325 1.324h11.495v-9.294h-3.128v-3.622h3.128v-2.671c0-3.1 1.893-4.788 4.659-4.788 1.325 0 2.463.099 2.795.143v3.24l-1.918.001c-1.504 0-1.795.715-1.795 1.763v2.313h3.587l-.467 3.622h-3.12v9.293h6.116c.73 0 1.323-.593 1.323-1.325v-21.35c0-.732-.593-1.325-1.325-1.325z"/>
+                            </svg>
+                            Facebook
+                        </a>
+                        
+                        <!-- Copy URL Link -->
+                        <button type="button" 
+                                @click="copyToClipboard" 
+                                class="inline-flex items-center gap-1.5 rounded-xl border border-slate-200 bg-white hover:border-indigo-650 hover:bg-indigo-50/30 px-3 py-2 text-xs font-bold text-slate-700 transition duration-150"
+                        >
+                            <svg class="h-4 w-4 text-indigo-650" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M8 5H6a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2v-1M8 5a2 2 0 002 2h2a2 2 0 002-2M8 5a2 2 0 012-2h2a2 2 0 012 2m0 0h2a2 2 0 012 2v3m2 4H10m0 0l3-3m-3 3l3 3" />
+                            </svg>
+                            <span x-text="copyText">Copy Link</span>
+                        </button>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
