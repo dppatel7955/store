@@ -14,118 +14,186 @@ new class extends Component
 };
 ?>
 
-<div class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-16 text-center space-y-12">
+<div class="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-16 space-y-10">
     <!-- Success Banner -->
-    <div class="space-y-4">
-        <div class="inline-flex items-center justify-center h-16 w-16 rounded-full bg-emerald-50 text-emerald-700 border border-emerald-200 mb-4 animate-bounce">
-            <svg class="h-8 w-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M5 13l4 4L19 7" />
+    <div class="text-center space-y-4">
+        <div class="inline-flex items-center justify-center h-20 w-20 rounded-full bg-emerald-50 border-4 border-emerald-100 text-emerald-600 mb-2 relative">
+            <div class="absolute inset-0 rounded-full bg-emerald-500/10 animate-ping"></div>
+            <svg class="h-10 w-10 relative" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="3">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
             </svg>
         </div>
-        <h1 class="text-3xl sm:text-4xl font-extrabold text-slate-900">Order Confirmed!</h1>
-        <p class="text-sm text-slate-500 max-w-md mx-auto leading-relaxed">
-            Thank you for your purchase. Your order has been placed successfully and is being processed by our warehouse.
+        <h1 class="text-3xl sm:text-5xl font-black text-slate-900 tracking-tight">Payment Successful!</h1>
+        <p class="text-xs sm:text-sm text-slate-500 max-w-lg mx-auto leading-relaxed">
+            Thank you for your purchase! Your payment has been processed securely, and your order is officially confirmed.
         </p>
     </div>
 
-    <!-- Order Timeline Tracker -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 text-left shadow-sm">
-        <h3 class="text-sm font-bold text-slate-805 uppercase tracking-wider border-b border-slate-200 pb-3">Shipment Status</h3>
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-8 items-start">
         
-        <div class="relative flex items-center justify-between">
-            <!-- Line Background -->
-            <div class="absolute left-4 right-4 top-1/2 h-0.5 bg-slate-200 -translate-y-1/2 -z-10"></div>
-            <!-- Progress Line -->
-            <div class="absolute left-4 w-1/4 top-1/2 h-0.5 bg-indigo-500 -translate-y-1/2 -z-10"></div>
+        <!-- Left Column: Timeline & Info -->
+        <div class="lg:col-span-2 space-y-8">
+            
+            <!-- Order Timeline Tracker -->
+            @php
+                $statusMap = [
+                    'new' => 1,
+                    'processing' => 2,
+                    'shipped' => 3,
+                    'delivered' => 4,
+                    'cancelled' => 0
+                ];
+                $currentStep = $statusMap[$order->status] ?? 1;
+                $progressWidth = match($currentStep) {
+                    2 => 'w-1/3',
+                    3 => 'w-2/3',
+                    4 => 'w-full',
+                    default => 'w-0'
+                };
+            @endphp
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+                <h3 class="text-xs font-black text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-3">
+                    Delivery Progress Tracker
+                </h3>
+                
+                <div class="relative flex items-center justify-between px-2 pt-2">
+                    <!-- Line Background -->
+                    <div class="absolute left-6 right-6 top-[18px] h-1 bg-slate-100 -translate-y-1/2 -z-10 rounded-full"></div>
+                    <!-- Progress Line -->
+                    <div class="absolute left-6 {{ $progressWidth }} top-[18px] h-1 bg-indigo-650 -translate-y-1/2 -z-10 rounded-full transition-all duration-700 ease-out"></div>
 
-            <!-- Steps -->
-            <div class="flex flex-col items-center">
-                <div class="h-8 w-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold ring-4 ring-white">1</div>
-                <span class="text-xs font-bold text-slate-800 mt-2">Placed</span>
-            </div>
-            <div class="flex flex-col items-center">
-                <div class="h-8 w-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold ring-4 ring-white">2</div>
-                <span class="text-xs font-medium text-slate-500 mt-2">Processing</span>
-            </div>
-            <div class="flex flex-col items-center">
-                <div class="h-8 w-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold ring-4 ring-white">3</div>
-                <span class="text-xs font-medium text-slate-500 mt-2">Shipped</span>
-            </div>
-            <div class="flex flex-col items-center">
-                <div class="h-8 w-8 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center text-xs font-bold ring-4 ring-white">4</div>
-                <span class="text-xs font-medium text-slate-500 mt-2">Delivered</span>
-            </div>
-        </div>
-    </div>
+                    <!-- Step 1: Placed -->
+                    <div class="flex flex-col items-center">
+                        <div class="h-9 w-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ring-4 ring-white {{ $currentStep >= 1 ? 'bg-indigo-650 text-white shadow-md' : 'bg-slate-100 text-slate-400' }}">
+                            1
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold mt-2 {{ $currentStep >= 1 ? 'text-indigo-600' : 'text-slate-400' }}">Placed</span>
+                    </div>
 
-    <!-- Invoice Details -->
-    <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 text-left shadow-sm">
-        <div class="flex flex-col sm:flex-row justify-between border-b border-slate-200 pb-4 gap-2">
-            <div>
-                <span class="text-xs text-slate-500 font-semibold">Order ID</span>
-                <h4 class="text-sm font-bold text-slate-800">#{{ $order->id }}</h4>
-            </div>
-            <div>
-                <span class="text-xs text-slate-500 font-semibold">Payment Method</span>
-                <h4 class="text-sm font-bold text-slate-800 uppercase">{{ $order->payment_method }}</h4>
-            </div>
-            <div>
-                <span class="text-xs text-slate-500 font-semibold">Payment Status</span>
-                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2 py-0.5 text-[10px] font-bold uppercase text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
-                    {{ $order->payment_status }}
-                </span>
-            </div>
-        </div>
+                    <!-- Step 2: Processing -->
+                    <div class="flex flex-col items-center">
+                        <div class="h-9 w-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ring-4 ring-white {{ $currentStep >= 2 ? 'bg-indigo-650 text-white shadow-md' : 'bg-slate-100 text-slate-400' }}">
+                            2
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold mt-2 {{ $currentStep >= 2 ? 'text-indigo-600' : 'text-slate-400' }}">Processing</span>
+                    </div>
 
-        <!-- Products -->
-        <div class="space-y-4">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-500">Items Ordered</h4>
-            <div class="divide-y divide-slate-200">
-                @foreach($order->items as $item)
-                    <div class="flex items-center justify-between py-3">
-                        <div class="flex items-center gap-3">
-                            <div class="h-10 w-10 flex-shrink-0 rounded bg-slate-50 overflow-hidden border border-slate-200">
-                                <img src="{{ $item->product->images[0] }}" alt="{{ $item->product->name }}" class="h-full w-full object-cover">
+                    <!-- Step 3: Shipped -->
+                    <div class="flex flex-col items-center">
+                        <div class="h-9 w-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ring-4 ring-white {{ $currentStep >= 3 ? 'bg-indigo-650 text-white shadow-md' : 'bg-slate-100 text-slate-400' }}">
+                            3
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold mt-2 {{ $currentStep >= 3 ? 'text-indigo-600' : 'text-slate-400' }}">Shipped</span>
+                    </div>
+
+                    <!-- Step 4: Delivered -->
+                    <div class="flex flex-col items-center">
+                        <div class="h-9 w-9 rounded-full flex items-center justify-center text-xs font-black transition-all duration-300 ring-4 ring-white {{ $currentStep >= 4 ? 'bg-indigo-650 text-white shadow-md' : 'bg-slate-100 text-slate-400' }}">
+                            4
+                        </div>
+                        <span class="text-[10px] sm:text-xs font-bold mt-2 {{ $currentStep >= 4 ? 'text-indigo-600' : 'text-slate-400' }}">Delivered</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Delivery & Payment Information -->
+            <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 space-y-6 shadow-sm">
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-8">
+                    <!-- Delivery Info -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Delivery Information</h4>
+                        <div class="text-xs sm:text-sm text-slate-800 space-y-1">
+                            <p class="font-bold">{{ $order->shipping_address['name'] }}</p>
+                            <p class="text-slate-500 leading-relaxed">
+                                {{ $order->shipping_address['street'] }},<br>
+                                {{ $order->shipping_address['city'] }}, {{ $order->shipping_address['state'] }} - {{ $order->shipping_address['zip'] }}
+                            </p>
+                            <p class="text-slate-500 pt-1">Phone: {{ $order->shipping_address['phone'] }}</p>
+                        </div>
+                    </div>
+
+                    <!-- Payment Info -->
+                    <div class="space-y-3">
+                        <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-400">Transaction Details</h4>
+                        <div class="text-xs sm:text-sm text-slate-800 space-y-3">
+                            <div>
+                                <span class="block text-[10px] uppercase font-bold text-slate-400">Order ID</span>
+                                <span class="font-mono font-bold text-slate-700">#{{ str_pad($order->id, 6, '0', STR_PAD_LEFT) }}</span>
                             </div>
                             <div>
-                                <h4 class="text-xs font-bold text-slate-800">{{ $item->product->name }}</h4>
-                                <span class="text-[10px] text-slate-500">₹{{ number_format($item->unit_amount) }} x {{ $item->quantity }}</span>
+                                <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Mode</span>
+                                <span class="font-bold text-indigo-750 uppercase">{{ $order->payment_method }}</span>
+                            </div>
+                            <div>
+                                <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Status</span>
+                                <span class="inline-flex items-center rounded-full bg-emerald-50 px-2.5 py-0.5 text-[10px] font-bold uppercase text-emerald-700 ring-1 ring-inset ring-emerald-600/10">
+                                    {{ $order->payment_status }}
+                                </span>
                             </div>
                         </div>
-                        <span class="text-xs font-bold text-slate-900">₹{{ number_format($item->total_amount) }}</span>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Right Column: Digital Receipt Summary -->
+        <div class="bg-white border border-slate-200 rounded-3xl p-6 sm:p-8 shadow-sm space-y-6">
+            <h3 class="text-xs font-black text-slate-800 uppercase tracking-wider border-b border-slate-100 pb-3">
+                Digital Receipt
+            </h3>
+
+            <!-- Products List -->
+            <div class="divide-y divide-slate-100 max-h-72 overflow-y-auto pr-1">
+                @foreach($order->items as $item)
+                    <div class="flex items-center justify-between py-3 gap-3">
+                        <div class="flex items-center gap-3">
+                            <div class="h-12 w-12 flex-shrink-0 rounded-xl bg-slate-50 overflow-hidden border border-slate-200/60 p-0.5">
+                                @if(is_array($item->product->images) && count($item->product->images) > 0)
+                                    <img src="{{ $item->product->images[0] }}" alt="{{ $item->product->name }}" class="h-full w-full object-cover rounded-lg">
+                                @else
+                                    <div class="h-full w-full bg-slate-100 flex items-center justify-center text-slate-400">🛍</div>
+                                @endif
+                            </div>
+                            <div class="min-w-0">
+                                <h4 class="text-xs sm:text-sm font-bold text-slate-800 truncate">{{ $item->product->name }}</h4>
+                                <span class="text-[10px] sm:text-xs text-slate-400 font-medium">₹{{ number_format($item->unit_amount) }} &times; {{ $item->quantity }}</span>
+                            </div>
+                        </div>
+                        <span class="text-xs sm:text-sm font-bold text-slate-900 shrink-0">₹{{ number_format($item->total_amount) }}</span>
                     </div>
                 @endforeach
             </div>
-        </div>
 
-        <!-- Shipping Destination -->
-        <div class="border-t border-slate-200 pt-6">
-            <h4 class="text-xs font-extrabold uppercase tracking-wider text-slate-500 mb-3">Delivery Information</h4>
-            <p class="text-xs text-slate-800 font-semibold">{{ $order->shipping_address['name'] }}</p>
-            <p class="text-xs text-slate-500 mt-1 leading-relaxed">
-                {{ $order->shipping_address['street'] }}, {{ $order->shipping_address['city'] }}, <br>
-                {{ $order->shipping_address['state'] }} - {{ $order->shipping_address['zip'] }}
-            </p>
-            <p class="text-xs text-slate-500 mt-1.5">Phone: {{ $order->shipping_address['phone'] }}</p>
-        </div>
-
-        <!-- Order Total -->
-        <div class="border-t border-slate-200 pt-4 space-y-2 text-sm text-slate-500">
-            <div class="flex justify-between">
-                <span>Shipping amount</span>
-                <span class="font-medium text-slate-800">₹{{ number_format($order->shipping_amount) }}</span>
-            </div>
-            <div class="flex justify-between text-base font-bold text-slate-900 pt-2 border-t border-slate-200">
-                <span>Amount Paid</span>
-                <span class="text-indigo-650">₹{{ number_format($order->grand_total) }}</span>
+            <!-- Totals -->
+            <div class="border-t border-slate-150 pt-4 space-y-2.5 text-xs sm:text-sm text-slate-500">
+                <div class="flex justify-between">
+                    <span>Shipping charge</span>
+                    <span class="font-bold text-slate-800">
+                        @if($order->shipping_amount > 0)
+                            ₹{{ number_format($order->shipping_amount) }}
+                        @else
+                            <span class="text-emerald-600 font-black uppercase text-[10px]">Free</span>
+                        @endif
+                    </span>
+                </div>
+                <div class="flex justify-between text-base font-black text-slate-900 pt-3 border-t border-slate-100">
+                    <span>Total Paid</span>
+                    <span class="text-indigo-650 text-lg">₹{{ number_format($order->grand_total) }}</span>
+                </div>
             </div>
         </div>
+
     </div>
 
     <!-- Actions -->
-    <div>
-        <a href="/shop" class="inline-flex items-center justify-center rounded-xl bg-slate-100 border border-slate-200 hover:bg-slate-200 hover:text-slate-900 py-3 px-6 text-sm font-bold text-slate-705 shadow-sm transition duration-300">
-            Continue Shopping Catalog
+    <div class="text-center pt-4">
+        <a href="/shop" class="inline-flex items-center justify-center rounded-2xl bg-indigo-650 hover:bg-indigo-700 py-3 px-8 text-xs font-bold text-white shadow hover:shadow-lg transition duration-300 gap-2">
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M10 19l-7-7m0 0l7-7m-7 7h18" />
+            </svg>
+            Continue Shopping
         </a>
     </div>
 </div>

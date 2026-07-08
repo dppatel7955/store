@@ -256,7 +256,7 @@ new class extends Component
                          class="w-full h-full flex items-center justify-center bg-white"
                     >
                         <template x-if="item.type === 'image'">
-                            <img :src="item.url" alt="{{ $product->name }}" 
+                            <img :src="item.url" loading="eager" decoding="async" alt="{{ $product->name }}" 
                                  class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
                                  :style="zoom ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
                             >
@@ -277,7 +277,7 @@ new class extends Component
                         class="h-14 w-14 bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-650 transition duration-150 flex items-center justify-center relative"
                     >
                         <template x-if="item.type === 'image'">
-                            <img :src="item.url" alt="Product Image Thumbnail" class="h-full w-full object-cover">
+                            <img :src="item.url" loading="lazy" decoding="async" alt="Product Image Thumbnail" class="h-full w-full object-cover">
                         </template>
                         <template x-if="item.type === 'video'">
                             <div class="flex flex-col items-center justify-center">
@@ -315,7 +315,7 @@ new class extends Component
             <div class="max-w-4xl w-full flex flex-col items-center justify-center space-y-6">
                 <!-- Large Image -->
                 <div class="w-full max-h-[70vh] flex items-center justify-center overflow-hidden rounded-2xl relative select-none">
-                    <img :src="mediaItems[activeIndex]?.type === 'image' ? mediaItems[activeIndex]?.url : ''" alt="Zoomed view" class="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl">
+                    <img :src="mediaItems[activeIndex]?.type === 'image' ? mediaItems[activeIndex]?.url : ''" loading="lazy" decoding="async" alt="Zoomed view" class="max-w-full max-h-[70vh] object-contain rounded-xl shadow-2xl">
                 </div>
 
                 <!-- Thumbnail Navigator inside Lightbox -->
@@ -327,7 +327,7 @@ new class extends Component
                             class="h-14 w-14 bg-slate-900 border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-450 transition flex-shrink-0 flex items-center justify-center"
                         >
                             <template x-if="item.type === 'image'">
-                                <img :src="item.url" alt="Thumbnail" class="h-full w-full object-cover">
+                                <img :src="item.url" loading="lazy" decoding="async" alt="Thumbnail" class="h-full w-full object-cover">
                             </template>
                             <template x-if="item.type === 'video'">
                                 <svg class="h-5 w-5 text-white" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -694,7 +694,7 @@ new class extends Component
                 @foreach($relatedProducts as $prod)
                     <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-indigo-600 hover:shadow-md transition duration-300 flex flex-col h-full shadow-sm">
                         <div class="aspect-square relative overflow-hidden bg-slate-50">
-                            <img src="{{ $prod->images[0] }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-550">
+                            <img src="{{ $prod->images[0] }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-550">
                         </div>
                         <div class="p-4 flex-grow flex flex-col justify-between">
                             <div>

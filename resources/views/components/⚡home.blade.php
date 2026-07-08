@@ -135,11 +135,11 @@ new class extends Component
                             <!-- Link target wrap -->
                             <template x-if="slide.url">
                                 <a :href="slide.url" class="block w-full h-full">
-                                    <img :src="slide.image_path" class="w-full h-full object-fill sm:object-cover select-none cursor-pointer" alt="Promo banner">
+                                    <img :src="slide.image_path" loading="eager" decoding="async" class="w-full h-full object-fill sm:object-cover select-none cursor-pointer" alt="Promo banner">
                                 </a>
                             </template>
                             <template x-if="!slide.url">
-                                <img :src="slide.image_path" class="w-full h-full object-fill sm:object-cover select-none" alt="Promo banner">
+                                <img :src="slide.image_path" loading="eager" decoding="async" class="w-full h-full object-fill sm:object-cover select-none" alt="Promo banner">
                             </template>
                         </div>
                     </template>
@@ -233,7 +233,7 @@ new class extends Component
                             <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
                                 <!-- Image -->
                                 <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
-                                    <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
+                                    <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                     @if($prod->sale_price)
                                         <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                             {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
@@ -292,7 +292,7 @@ new class extends Component
                 <div class="group relative block overflow-hidden rounded-2xl bg-white border border-slate-200 p-6 text-center hover:border-indigo-500 hover:shadow-md transition duration-300">
                     <a href="{{ route('categories.detail', ['slug' => $cat->slug]) }}" class="block">
                         <div class="h-24 w-24 mx-auto mb-4 overflow-hidden rounded-full border border-slate-100 group-hover:scale-105 transition duration-300">
-                            <img src="{{ $cat->image }}" alt="{{ $cat->name }}" class="h-full w-full object-cover">
+                            <img src="{{ $cat->image }}" loading="lazy" decoding="async" alt="{{ $cat->name }}" class="h-full w-full object-cover">
                         </div>
                         <h3 class="text-base font-bold text-slate-800 group-hover:text-indigo-600 transition">{{ $cat->name }}</h3>
                     </a>
@@ -318,7 +318,7 @@ new class extends Component
             <div class="flex flex-wrap items-center justify-center md:justify-between gap-8 md:gap-4">
                 @foreach($brands as $brand)
                     <a href="/shop?brand={{ $brand->slug }}" class="flex items-center gap-3 grayscale opacity-60 hover:grayscale-0 hover:opacity-100 transition duration-300">
-                        <img src="{{ $brand->logo }}" alt="{{ $brand->name }}" class="h-8 w-8 object-contain rounded-full border border-slate-200 p-0.5 bg-white">
+                        <img src="{{ $brand->logo }}" loading="lazy" decoding="async" alt="{{ $brand->name }}" class="h-8 w-8 object-contain rounded-full border border-slate-200 p-0.5 bg-white">
                         <span class="text-lg font-bold text-slate-700">{{ $brand->name }}</span>
                     </a>
                 @endforeach
@@ -418,7 +418,7 @@ new class extends Component
                                 <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="block flex-1 flex flex-col">
                                     <!-- Image -->
                                     <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
-                                        <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
+                                        <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                         @if($prod->sale_price)
                                             <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                                 {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
