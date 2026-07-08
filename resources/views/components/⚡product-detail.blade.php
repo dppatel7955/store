@@ -695,14 +695,27 @@ new class extends Component
                     <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="group bg-white border border-slate-200 rounded-2xl overflow-hidden hover:border-indigo-600 hover:shadow-md transition duration-300 flex flex-col h-full shadow-sm">
                         <div class="aspect-square relative overflow-hidden bg-slate-50">
                             <img src="{{ $prod->images[0] }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-550">
+                            @if($prod->sale_price)
+                                <span class="absolute top-2 left-2 bg-rose-500 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                    {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
+                                </span>
+                            @endif
                         </div>
                         <div class="p-4 flex-grow flex flex-col justify-between">
                             <div>
                                 <span class="text-[9px] font-extrabold uppercase text-indigo-600">{{ $prod->brand->name }}</span>
                                 <h3 class="text-xs font-bold text-slate-800 mt-0.5 line-clamp-1 group-hover:text-indigo-600 transition">{{ $prod->name }}</h3>
                             </div>
-                            <div class="text-sm font-bold text-slate-900 mt-2">
-                                ₹{{ number_format($prod->sale_price ?? $prod->price) }}
+                            <div class="mt-2 flex items-baseline gap-2 flex-wrap">
+                                @if($prod->sale_price)
+                                    <span class="text-sm font-bold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
+                                    <span class="text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                    <span class="text-[10px] font-extrabold text-rose-600">
+                                        {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
+                                    </span>
+                                @else
+                                    <span class="text-sm font-bold text-slate-900">₹{{ number_format($prod->price) }}</span>
+                                @endif
                             </div>
                         </div>
                     </a>
