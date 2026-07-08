@@ -35,7 +35,7 @@
             <div>
                 <h1 class="text-3xl font-black text-slate-900 tracking-tight">SAFFRON STORE</h1>
                 <p class="text-xs text-slate-500 mt-1.5">Premium Multi-Category E-Commerce Outlet</p>
-                <p class="text-xs text-slate-450 mt-1">support@saffronstore.com &bull; +1 (800) 555-0199</p>
+                <p class="text-xs text-slate-450 mt-1">saffronstore@gmail.com</p>
             </div>
             <div class="sm:text-right">
                 <h2 class="text-xl font-bold text-indigo-600">INVOICE</h2>

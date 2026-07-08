@@ -344,17 +344,22 @@ new class extends Component
 
 <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
     <!-- Global Loading Overlay for Payment Verification -->
-    <div wire:loading wire:target="handleRazorpaySuccess" class="fixed inset-0 z-50 flex flex-col items-center justify-center bg-slate-900/60 backdrop-blur-sm transition-all duration-300">
-        <div class="bg-white p-8 rounded-2xl shadow-xl flex flex-col items-center space-y-4 max-w-sm mx-4 text-center">
-            <div class="relative flex items-center justify-center">
-                <div class="animate-spin rounded-full h-16 w-16 border-4 border-indigo-100 border-t-indigo-600"></div>
-                <svg class="h-6 w-6 text-indigo-600 absolute animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
+    <div wire:loading wire:target="handleRazorpaySuccess" class="fixed inset-0 z-[9999] flex items-center justify-center bg-slate-950/70 backdrop-blur-md transition-all duration-300" style="display: none;">
+        <div class="bg-white/95 border border-slate-200/50 p-6 sm:p-10 rounded-3xl shadow-2xl flex flex-col items-center space-y-6 w-[90%] max-w-sm sm:max-w-md text-center transform scale-100 transition-all duration-300">
+            <!-- Premium Spinner Wrapper -->
+            <div class="relative flex items-center justify-center h-20 w-20">
+                <!-- Outer Pulse Ring -->
+                <div class="absolute inset-0 rounded-full bg-indigo-500/10 animate-ping"></div>
+                <!-- Gradient Border Spinner -->
+                <div class="animate-spin rounded-full h-16 w-16 border-4 border-slate-100 border-t-indigo-650 border-r-indigo-650"></div>
+                <!-- Shield Icon -->
+                <svg class="h-6 w-6 text-indigo-650 absolute animate-pulse" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z" />
                 </svg>
             </div>
-            <div class="space-y-1">
-                <h3 class="text-base font-extrabold text-slate-900">Verifying Payment</h3>
-                <p class="text-xs text-slate-500 font-medium">Securing transaction parameters & generating your order invoice. Please do not close this window.</p>
+            <div class="space-y-2">
+                <h3 class="text-lg sm:text-xl font-extrabold text-slate-900 tracking-tight">Verifying Payment</h3>
+                <p class="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">Securing transaction parameters & generating your order invoice.<br><span class="text-indigo-600 font-bold">Please do not close or refresh this page.</span></p>
             </div>
         </div>
     </div>
