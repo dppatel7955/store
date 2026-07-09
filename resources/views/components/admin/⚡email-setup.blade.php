@@ -36,8 +36,10 @@ new class extends Component
             'username' => 'nullable|string',
             'password' => 'nullable|string',
             'encryption' => 'required|in:none,ssl,tls',
-            'from_address' => 'required|email',
+            'from_address' => ['required', 'email', 'not_regex:/@(example\.com|example\.org|test\.com|localhost)$/i'],
             'from_name' => 'required|string',
+        ], [
+            'from_address.not_regex' => 'Use a real business email on your own domain (not example.com or test.com).',
         ]);
 
         $settings = [
@@ -94,6 +96,7 @@ new class extends Component
         <div>
             <h1 class="text-3xl font-extrabold text-slate-900">Email Setup</h1>
             <p class="text-xs text-slate-500 mt-1">Configure SMTP settings to automatically send order invoices to customers.</p>
+            <p class="text-xs text-amber-700 mt-2 font-medium">Use a sender email from your real domain (e.g. no-reply@yourdomain.com) and add SPF/DKIM/DMARC DNS records to avoid spam.</p>
         </div>
     </div>
 

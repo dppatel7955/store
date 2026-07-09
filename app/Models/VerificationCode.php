@@ -6,6 +6,10 @@ use Illuminate\Database\Eloquent\Model;
 
 class VerificationCode extends Model
 {
+    public const OTP_VALID_SECONDS = 120;
+
+    public const RESEND_COOLDOWN_SECONDS = 120;
+
     protected $fillable = [
         'type',
         'identifier',
@@ -33,5 +37,30 @@ class VerificationCode extends Model
     public function isValid(string $code): bool
     {
         return $this->code === $code && !$this->isExpired() && is_null($this->verified_at);
+    }
+
+    public function canResend(): bool
+    {
+        return $this->secondsUntilResendAllowed() === 0;
+    }
+
+    public function secondsUntilResendAllowed(): int
+    {
+        $availableAt = $this->updated_at->copy()->addSeconds(self::RESEND_COOLDOWN_SECONDS);
+
+        if ($availableAt->isPast()) {
+            return 0;
+        }
+
+        return (int) now()->diffInSeconds($availableAt);
+    }
+
+    public function secondsUntilExpiry(): int
+    {
+        if ($this->isExpired()) {
+            return 0;
+        }
+
+        return (int) now()->diffInSeconds($this->expires_at);
     }
 }

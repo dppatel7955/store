@@ -27,7 +27,7 @@
                     </tr>
                 </table>
                 
-                <p style="margin: 24px 0 0 0; font-size: 11px; color: #64748b;">This verification code is valid for 10 minutes. If you did not register for Saffron Store, please ignore this email.</p>
+                <p style="margin: 24px 0 0 0; font-size: 11px; color: #64748b;">This verification code is valid for 2 minutes. If you did not register for Saffron Store, please ignore this email.</p>
             </td>
         </tr>
         <!-- Footer -->

@@ -20,6 +20,7 @@ class AppServiceProvider extends ServiceProvider
             $settings = json_decode(file_get_contents(storage_path('app/mail_setup.json')), true);
             if ($settings) {
                 config([
+                    'mail.default' => 'smtp',
                     'mail.mailers.smtp.host' => $settings['host'] ?? config('mail.mailers.smtp.host'),
                     'mail.mailers.smtp.port' => $settings['port'] ?? config('mail.mailers.smtp.port'),
                     'mail.mailers.smtp.username' => $settings['username'] ?? config('mail.mailers.smtp.username'),

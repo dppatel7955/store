@@ -4,6 +4,7 @@ use Livewire\Component;
 use App\Models\User;
 use App\Models\VerificationCode;
 use App\Mail\VerificationMail;
+use App\Services\VerificationCodeService;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Facades\RateLimiter;
@@ -13,6 +14,8 @@ new class extends Component
     public string $email = '';
     public string $enteredOtp = '';
     public string $redirect = '/shop';
+    public int $resendAvailableIn = 0;
+    public int $otpExpiresIn = 0;
 
     public function mount()
     {
@@ -23,6 +26,16 @@ new class extends Component
         if (empty($this->email) && auth()->check()) {
             $this->email = auth()->user()->email;
         }
+
+        $this->syncOtpTimers();
+    }
+
+    protected function syncOtpTimers(): void
+    {
+        $verification = VerificationCodeService::find('email_verify', $this->email);
+        $timers = VerificationCodeService::timerState($verification);
+        $this->resendAvailableIn = $timers['resendAvailableIn'];
+        $this->otpExpiresIn = $timers['otpExpiresIn'];
     }
 
     protected function sanitizeRedirect(string $redirect): string
@@ -72,6 +85,7 @@ new class extends Component
             } else {
                 $this->addError('enteredOtp', 'The verification code entered is incorrect or expired.');
             }
+            $this->syncOtpTimers();
             return;
         }
 
@@ -110,22 +124,21 @@ new class extends Component
             'email' => 'required|email|exists:users,email',
         ]);
 
-        // Generate new verification code
-        $code = (string) rand(100000, 999999);
+        $existing = VerificationCodeService::find('email_verify', $this->email);
+        if ($existing && !$existing->canResend()) {
+            $seconds = $existing->secondsUntilResendAllowed();
+            $this->addError('email', "Please wait {$seconds} seconds before requesting a new code.");
+            $this->syncOtpTimers();
+            return;
+        }
 
-        // Save code to database
-        VerificationCode::updateOrCreate(
-            ['type' => 'email_verify', 'identifier' => $this->email],
-            [
-                'code' => $code,
-                'expires_at' => now()->addMinutes(10),
-                'verified_at' => null,
-            ]
-        );
+        $verification = VerificationCodeService::issue('email_verify', $this->email);
+        $this->syncOtpTimers();
+        $this->enteredOtp = '';
 
         // Send Email
         try {
-            Mail::to($this->email)->send(new VerificationMail($code));
+            Mail::to($this->email)->send(new VerificationMail($verification->code));
             
             $this->dispatch('swal', 
                 title: 'Code Sent!', 
@@ -168,7 +181,14 @@ new class extends Component
 
             <div class="rounded-xl bg-indigo-50 border border-indigo-200 p-4 text-xs text-indigo-700 leading-relaxed space-y-2">
                 <p>We've sent a 6-digit verification code to the email address above. Please enter it below to verify your account.</p>
+                <p class="text-indigo-600">Each code is valid for 2 minutes. Resend is available after 2 minutes.</p>
             </div>
+
+            <x-otp-verification-timers
+                :key="'verify-otp-'.$resendAvailableIn.'-'.$otpExpiresIn"
+                :resend-available-in="$resendAvailableIn"
+                :otp-expires-in="$otpExpiresIn"
+            />
 
             <div>
                 <label for="verify-otp-input" class="block text-xs font-semibold text-slate-500 mb-1.5">Verification Code (6 Digits)</label>
@@ -177,7 +197,14 @@ new class extends Component
             </div>
 
             <div class="flex items-center justify-between text-xs">
-                <button type="button" wire:click="resend" wire:loading.attr="disabled" wire:target="resend" class="font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 disabled:opacity-50">
+                <button
+                    type="button"
+                    wire:click="resend"
+                    wire:loading.attr="disabled"
+                    wire:target="resend"
+                    @disabled($resendAvailableIn > 0)
+                    class="font-bold text-indigo-600 hover:text-indigo-700 flex items-center gap-1.5 disabled:opacity-50 disabled:cursor-not-allowed"
+                >
                     <span wire:loading.remove wire:target="resend">Resend Code</span>
                     <span wire:loading wire:target="resend" class="flex items-center gap-1.5 text-indigo-500">
                         <svg class="animate-spin h-3.5 w-3.5 text-indigo-600" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">

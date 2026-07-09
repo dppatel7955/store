@@ -1,6 +1,7 @@
 <?php
 
 use Livewire\Component;
+use App\Services\VerificationCodeService;
 use Illuminate\Support\Facades\RateLimiter;
 
 new class extends Component
@@ -44,22 +45,11 @@ new class extends Component
 
                 RateLimiter::hit($otpKey, 300);
 
-                // Generate verification code
-                $code = (string) rand(100000, 999999);
-
-                // Store code in database
-                \App\Models\VerificationCode::updateOrCreate(
-                    ['type' => 'email_verify', 'identifier' => $user->email],
-                    [
-                        'code' => $code,
-                        'expires_at' => now()->addMinutes(10),
-                        'verified_at' => null,
-                    ]
-                );
+                $verification = VerificationCodeService::issue('email_verify', $user->email);
 
                 // Dispatch Email
                 try {
-                    \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerificationMail($code));
+                    \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerificationMail($verification->code));
                 } catch (\Exception $e) {
                     \Illuminate\Support\Facades\Log::error("Failed to send login verification email: " . $e->getMessage());
                 }

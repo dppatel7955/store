@@ -27,6 +27,8 @@ class OrderInvoiceMail extends Mailable
     public function build()
     {
         return $this->subject('Invoice for Order #' . $this->order->id)
-                    ->view('emails.order-invoice');
+            ->replyTo(config('mail.from.address'), config('mail.from.name'))
+            ->view('emails.order-invoice')
+            ->text('emails.order-invoice-text');
     }
 }

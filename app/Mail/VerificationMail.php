@@ -28,7 +28,8 @@ class VerificationMail extends Mailable
     public function envelope(): Envelope
     {
         return new Envelope(
-            subject: 'Verify Your Saffron Store Account',
+            subject: 'Your Saffron Store verification code',
+            replyTo: [config('mail.from.address')],
         );
     }
 
@@ -39,6 +40,7 @@ class VerificationMail extends Mailable
     {
         return new Content(
             view: 'emails.verification',
+            text: 'emails.verification-text',
         );
     }
 
