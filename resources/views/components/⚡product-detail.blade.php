@@ -460,6 +460,25 @@ new class extends Component
 
                 <div class="text-slate-600 text-sm leading-relaxed mb-6 trix-content">{!! $product->short_description !!}</div>
                 
+                <!-- Variant Selectors -->
+                @if($product->variants->count() > 0)
+                    <div class="mt-6 space-y-3">
+                        <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider">Select Options</label>
+                        <div class="flex flex-wrap gap-2">
+                            @foreach($product->variants as $var)
+                                <button 
+                                    type="button"
+                                    @click="selectVariant({{ $var->id }})"
+                                    :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                    class="px-4 py-2.5 text-xs font-semibold border rounded-xl shadow-sm transition duration-150"
+                                >
+                                    {{ $var->name }}
+                                </button>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+                
                 <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5">
 
                     <h3 class="mb-4 text-sm font-bold text-slate-900">
@@ -520,25 +539,6 @@ new class extends Component
                         </div>
                     </div>
                 </div>
-
-                <!-- Variant Selectors -->
-                @if($product->variants->count() > 0)
-                    <div class="mt-6 space-y-3">
-                        <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider">Select Options</label>
-                        <div class="flex flex-wrap gap-2">
-                            @foreach($product->variants as $var)
-                                <button 
-                                    type="button"
-                                    @click="selectVariant({{ $var->id }})"
-                                    :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
-                                    class="px-4 py-2.5 text-xs font-semibold border rounded-xl shadow-sm transition duration-150"
-                                >
-                                    {{ $var->name }}
-                                </button>
-                            @endforeach
-                        </div>
-                    </div>
-                @endif
 
                 <div class="mt-6 grid grid-cols-2 gap-3">
 
