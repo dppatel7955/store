@@ -167,6 +167,16 @@ new class extends Component
                     this.selectVariant(value);
                 }
             });
+            this.$watch('activeIndex', value => {
+                const container = document.getElementById('main-gallery-slider');
+                const slide = document.getElementById('main-slide-' + value);
+                if (container && slide) {
+                    const targetScroll = slide.offsetLeft;
+                    if (Math.abs(container.scrollLeft - targetScroll) > 5) {
+                        container.scrollTo({ left: targetScroll, behavior: 'smooth' });
+                    }
+                }
+            });
         },
         buildMediaList() {
             let list = [];
@@ -253,10 +263,9 @@ new class extends Component
     }">
         <!-- Gallery -->
         <div class="space-y-4">
-            <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative"
-                 :class="mediaItems[activeIndex]?.type === 'image' ? 'cursor-zoom-in' : ''"
+            <!-- Main Images Slider -->
+            <div class="aspect-square bg-white border border-slate-200 rounded-2xl overflow-hidden shadow-sm relative group"
                  x-data="{ zoom: false, x: 50, y: 50 }"
-                 @click="if(mediaItems[activeIndex]?.type === 'image') lightboxOpen = true"
                  @mouseenter="if(mediaItems[activeIndex]?.type === 'image') zoom = true"
                  @mouseleave="zoom = false; x = 50; y = 50"
                  @mousemove="
@@ -265,51 +274,81 @@ new class extends Component
                      y = (($event.clientY - rect.top) / rect.height) * 100;
                  "
             >
-                <template x-for="(item, idx) in mediaItems" :key="idx">
-                    <div x-show="activeIndex === idx"
-                         x-transition:enter="transition ease-out duration-700 transform"
-                         x-transition:enter-start="opacity-0 scale-102"
-                         x-transition:enter-end="opacity-100 scale-100"
-                         x-transition:leave="transition ease-in duration-550 transform absolute inset-0"
-                         x-transition:leave-start="opacity-100 scale-100"
-                         x-transition:leave-end="opacity-0 scale-98"
-                         class="w-full h-full flex items-center justify-center bg-white"
-                    >
-                        <template x-if="item.type === 'image'">
-                            <img :src="item.url" loading="eager" decoding="async" alt="{{ $product->name }}" 
-                                 class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
-                                 :style="zoom ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
-                            >
-                        </template>
-                        <template x-if="item.type === 'video'">
-                            <video :src="item.url" controls autoplay muted @ended="goToNext()" class="h-full w-full object-contain bg-black"></video>
-                        </template>
-                    </div>
-                </template>
+                <!-- Horizontal Scrollable Container -->
+                <div id="main-gallery-slider" 
+                     class="w-full h-full flex overflow-x-auto snap-x snap-mandatory scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+                     @scroll="
+                         const scrollLeft = $el.scrollLeft;
+                         const width = $el.clientWidth;
+                         const newIndex = Math.round(scrollLeft / width);
+                         if (newIndex !== activeIndex && newIndex >= 0 && newIndex < mediaItems.length) {
+                             activeIndex = newIndex;
+                         }
+                     "
+                >
+                    <template x-for="(item, idx) in mediaItems" :key="idx">
+                        <div :id="'main-slide-' + idx" 
+                             class="w-full h-full flex-shrink-0 snap-start bg-white flex items-center justify-center relative cursor-zoom-in"
+                             @click="if(item.type === 'image') lightboxOpen = true"
+                        >
+                            <template x-if="item.type === 'image'">
+                                <img :src="item.url" loading="eager" decoding="async" alt="{{ $product->name }}" 
+                                     class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
+                                     :style="zoom && activeIndex === idx ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
+                                >
+                            </template>
+                            <template x-if="item.type === 'video'">
+                                <video :src="item.url" controls autoplay muted @ended="goToNext()" class="h-full w-full object-contain bg-black"></video>
+                            </template>
+                        </div>
+                    </template>
+                </div>
+
+                <!-- Left/Right Arrow Navigation Overlays (visible on hover) -->
+                <button type="button" 
+                        @click.stop="activeIndex = (activeIndex - 1 + mediaItems.length) % mediaItems.length" 
+                        class="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 z-10"
+                        x-show="mediaItems.length > 1"
+                >
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
+                    </svg>
+                </button>
+                <button type="button" 
+                        @click.stop="activeIndex = (activeIndex + 1) % mediaItems.length" 
+                        class="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 z-10"
+                        x-show="mediaItems.length > 1"
+                >
+                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
+                    </svg>
+                </button>
             </div>
             
-            <!-- Sub-images thumbnails if any -->
-            <div class="flex flex-wrap gap-3" x-show="mediaItems.length > 1">
-                <template x-for="(item, idx) in mediaItems" :key="idx">
-                    <div 
-                        @click="selectItem(idx)"
-                        :class="activeIndex === idx ? 'border-indigo-650 ring-2 ring-indigo-500/20' : 'border-slate-200'"
-                        class="h-14 w-14 bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-650 transition duration-150 flex items-center justify-center relative"
-                    >
-                        <template x-if="item.type === 'image'">
-                            <img :src="item.url" loading="lazy" decoding="async" alt="Product Image Thumbnail" class="h-full w-full object-cover">
-                        </template>
-                        <template x-if="item.type === 'video'">
-                            <div class="flex flex-col items-center justify-center">
-                                <svg class="h-5 w-5 text-indigo-650" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
-                                    <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
-                                </svg>
-                                <span class="text-[8px] font-extrabold text-indigo-700 mt-0.5">Video</span>
-                            </div>
-                        </template>
-                    </div>
-                </template>
+            <!-- Sub-images thumbnails inside horizontal slider -->
+            <div class="w-full overflow-hidden" x-show="mediaItems.length > 1">
+                <div class="flex gap-3 overflow-x-auto pb-2 scroll-smooth [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+                    <template x-for="(item, idx) in mediaItems" :key="idx">
+                        <div 
+                            @click="selectItem(idx)"
+                            :class="activeIndex === idx ? 'border-indigo-650 ring-2 ring-indigo-500/20' : 'border-slate-200'"
+                            class="h-14 w-14 bg-white border rounded-xl overflow-hidden cursor-pointer hover:border-indigo-650 transition duration-150 flex items-center justify-center relative flex-shrink-0"
+                        >
+                            <template x-if="item.type === 'image'">
+                                <img :src="item.url" loading="lazy" decoding="async" alt="Product Image Thumbnail" class="h-full w-full object-cover">
+                            </template>
+                            <template x-if="item.type === 'video'">
+                                <div class="flex flex-col items-center justify-center">
+                                    <svg class="h-5 w-5 text-indigo-650" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M14.752 11.168l-3.197-2.132A1 1 0 0010 9.87v4.263a1 1 0 001.555.832l3.197-2.132a1 1 0 000-1.664z" />
+                                        <path stroke-linecap="round" stroke-linejoin="round" d="M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                    </svg>
+                                    <span class="text-[8px] font-extrabold text-indigo-700 mt-0.5">Video</span>
+                                </div>
+                            </template>
+                        </div>
+                    </template>
+                </div>
             </div>
         </div>
 
