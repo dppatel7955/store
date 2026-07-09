@@ -439,7 +439,7 @@ new class extends Component
                 @if($imageFiles && count($imageFiles) > 0)
                     <div class="space-y-2 pt-2 border-t border-slate-100">
                         <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Newly Selected Files Preview ({{ count($imageFiles) }})</span>
-                        <div class="grid grid-cols-4 gap-2">
+                        <div class="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-2">
                             @foreach($imageFiles as $file)
                                 <div class="aspect-square border border-slate-200 rounded-lg overflow-hidden bg-slate-50 relative">
                                     <img src="{{ $file->temporaryUrl() }}" class="h-full w-full object-cover">
