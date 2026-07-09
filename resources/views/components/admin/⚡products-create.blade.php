@@ -75,8 +75,8 @@ new class extends Component
         $this->variants[] = [
             'name' => '',
             'sku' => '',
-            'price' => '',
-            'sale_price' => '',
+            'price' => $this->price ?? '',
+            'sale_price' => $this->sale_price ?? '',
             'stock' => 0,
             'images' => [],
         ];
