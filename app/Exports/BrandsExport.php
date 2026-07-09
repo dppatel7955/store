@@ -9,9 +9,22 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 
 class BrandsExport implements FromCollection, WithHeadings, WithMapping
 {
+    protected $search;
+
+    public function __construct($search = '')
+    {
+        $this->search = $search;
+    }
+
     public function collection()
     {
-        return Brand::latest('id')->get();
+        return Brand::query()
+            ->when($this->search, function ($query) {
+                $query->where('name', 'like', '%' . $this->search . '%')
+                      ->orWhere('slug', 'like', '%' . $this->search . '%');
+            })
+            ->latest('id')
+            ->get();
     }
 
     public function headings(): array

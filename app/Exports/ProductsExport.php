@@ -8,6 +8,17 @@ use Maatwebsite\Excel\Concerns\WithHeadings;
 
 class ProductsExport implements FromArray, WithHeadings
 {
+    protected $search;
+    protected $categoryId;
+    protected $brandId;
+
+    public function __construct($search = '', $categoryId = '', $brandId = '')
+    {
+        $this->search = $search;
+        $this->categoryId = $categoryId;
+        $this->brandId = $brandId;
+    }
+
     public function headings(): array
     {
         return [
@@ -19,7 +30,24 @@ class ProductsExport implements FromArray, WithHeadings
 
     public function array(): array
     {
-        $products = Product::with(['category', 'brand', 'variants'])->latest('id')->get();
+        $products = Product::query()
+            ->with(['category', 'brand', 'variants'])
+            ->when($this->search, function ($query) {
+                $query->where(function($q) {
+                    $q->where('name', 'like', '%' . $this->search . '%')
+                      ->orWhere('description', 'like', '%' . $this->search . '%')
+                      ->orWhere('sku', 'like', '%' . $this->search . '%');
+                });
+            })
+            ->when($this->categoryId, function ($query) {
+                $query->where('category_id', $this->categoryId);
+            })
+            ->when($this->brandId, function ($query) {
+                $query->where('brand_id', $this->brandId);
+            })
+            ->latest('id')
+            ->get();
+
         $rows = [];
 
         foreach ($products as $product) {

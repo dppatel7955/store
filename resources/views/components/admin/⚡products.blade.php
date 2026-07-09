@@ -134,7 +134,7 @@ new class extends Component
     public function exportCsv()
     {
         $fileName = 'products_export_' . now()->format('Y_m_d_His') . '.csv';
-        return \Excel::download(new \App\Exports\ProductsExport, $fileName);
+        return \Excel::download(new \App\Exports\ProductsExport($this->search, $this->filterCategory, $this->filterBrand), $fileName);
     }
 };
 ?>

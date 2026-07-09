@@ -201,7 +201,7 @@ new class extends Component
     public function exportCsv()
     {
         $fileName = 'categories_export_' . now()->format('Y_m_d_His') . '.csv';
-        return \Excel::download(new \App\Exports\CategoriesExport, $fileName);
+        return \Excel::download(new \App\Exports\CategoriesExport($this->search), $fileName);
     }
 };
 ?>
