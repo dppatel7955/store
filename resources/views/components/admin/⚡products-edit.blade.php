@@ -554,6 +554,20 @@ new class extends Component
                     @error('imageFiles.*') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
 
+                <!-- Local Uploads Previews -->
+                @if($imageFiles && count($imageFiles) > 0)
+                    <div class="space-y-2 pt-2 border-t border-slate-100">
+                        <span class="block text-[10px] font-bold uppercase tracking-wider text-slate-400">Newly Selected Files Preview ({{ count($imageFiles) }})</span>
+                        <div class="grid grid-cols-4 gap-2">
+                            @foreach($imageFiles as $file)
+                                <div class="aspect-square border border-slate-200 rounded-lg overflow-hidden bg-slate-50 relative">
+                                    <img src="{{ $file->temporaryUrl() }}" class="h-full w-full object-cover">
+                                </div>
+                            @endforeach
+                        </div>
+                    </div>
+                @endif
+
                 <!-- Preview Thumbnail Grid -->
                 @if(count($imagesList) > 0)
                     <div class="space-y-2 pt-2">

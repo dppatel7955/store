@@ -158,29 +158,56 @@ new class extends Component
             this.buildMediaList();
             this.startTimer();
             if (this.selectedVariantId) {
-                this.selectVariant(this.selectedVariantId);
+                setTimeout(() => {
+                    this.selectVariant(this.selectedVariantId);
+                }, 50);
             }
+            this.$watch('selectedVariantId', value => {
+                if (value) {
+                    this.selectVariant(value);
+                }
+            });
         },
         buildMediaList() {
             let list = [];
-            this.productImages.forEach(img => {
-                list.push({ type: 'image', url: img });
-            });
+            if (Array.isArray(this.productImages)) {
+                this.productImages.forEach(img => {
+                    list.push({ type: 'image', url: img });
+                });
+            }
             if (this.videoPath) {
                 list.push({ type: 'video', url: this.videoPath });
+            }
+            this.variantMappings = {};
+            if (Array.isArray(this.variants)) {
+                this.variants.forEach(variant => {
+                    if (variant.images && variant.images.length > 0) {
+                        let firstImg = variant.images[0];
+                        let existingIdx = list.findIndex(item => item.url === firstImg);
+                        if (existingIdx !== -1) {
+                            this.variantMappings[variant.id] = existingIdx;
+                        } else {
+                            let newIdx = list.length;
+                            list.push({ type: 'image', url: firstImg, variantId: variant.id });
+                            this.variantMappings[variant.id] = newIdx;
+                            for (let i = 1; i < variant.images.length; i++) {
+                                let img = variant.images[i];
+                                if (!list.some(item => item.url === img)) {
+                                    list.push({ type: 'image', url: img, variantId: variant.id });
+                                }
+                            }
+                        }
+                    }
+                });
             }
             this.mediaItems = list;
         },
         startTimer() {
             this.stopTimer();
             if (this.mediaItems.length <= 1) return;
-            
-            // If current item is a video, do not auto-advance with timer.
-            // The video ended event will trigger the advance.
             if (this.mediaItems[this.activeIndex] && this.mediaItems[this.activeIndex].type === 'video') {
                 return;
             }
-
             this.timer = setInterval(() => {
                 this.goToNext();
             }, 4000);
@@ -209,23 +236,16 @@ new class extends Component
                 this.selectedVariantStock = variant.stock;
                 this.selectedVariantSku = variant.sku || '{{ $product->sku }}';
                 
-                let imgs = (variant.images && variant.images.length > 0) ? variant.images : this.productImages;
-                let list = [];
-                imgs.forEach(img => {
-                    list.push({ type: 'image', url: img });
-                });
-                if (this.videoPath) {
-                    list.push({ type: 'video', url: this.videoPath });
+                let targetIdx = this.variantMappings[variant.id];
+                if (targetIdx !== undefined && targetIdx !== -1) {
+                    this.activeIndex = targetIdx;
                 }
-                this.mediaItems = list;
-                this.activeIndex = 0;
                 this.startTimer();
             } else {
                 this.selectedVariantPrice = null;
                 this.selectedVariantSalePrice = null;
                 this.selectedVariantStock = {{ $product->stock }};
                 this.selectedVariantSku = '{{ $product->sku }}';
-                this.buildMediaList();
                 this.activeIndex = 0;
                 this.startTimer();
             }
