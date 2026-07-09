@@ -117,6 +117,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
         $order = \App\Models\Order::with(['items.product', 'paymentMethodConfig'])->findOrFail($id);
         return view('pages.admin.invoice', compact('order'));
     })->name('admin.orders.invoice');
+    Route::get('/admin/stock', function () {
+        return view('pages.admin.stock');
+    })->name('admin.stock');
 });
 
 Route::get('/privacy-policy', function () {
