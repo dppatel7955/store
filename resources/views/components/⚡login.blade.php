@@ -1,23 +1,49 @@
 <?php
 
 use Livewire\Component;
+use Illuminate\Support\Facades\RateLimiter;
 
 new class extends Component
 {
     public string $email = '';
     public string $password = '';
 
+    protected function throttleKey(string $action): string
+    {
+        return sprintf('login:%s:%s:%s', $action, strtolower($this->email ?: 'guest'), request()->ip());
+    }
+
     public function login()
     {
+        $loginKey = $this->throttleKey('attempt');
+        if (RateLimiter::tooManyAttempts($loginKey, 5)) {
+            $seconds = RateLimiter::availableIn($loginKey);
+            $this->addError('email', "Too many login attempts. Try again in {$seconds} seconds.");
+            return;
+        }
+
         $this->validate([
             'email' => 'required|email',
             'password' => 'required',
         ]);
 
         if (auth()->attempt(['email' => $this->email, 'password' => $this->password])) {
+            RateLimiter::clear($loginKey);
             $user = auth()->user();
 
             if ($user->email_verified_at === null) {
+                $otpKey = $this->throttleKey('otp-send');
+                if (RateLimiter::tooManyAttempts($otpKey, 3)) {
+                    $seconds = RateLimiter::availableIn($otpKey);
+                    auth()->logout();
+                    session()->invalidate();
+                    session()->regenerateToken();
+                    session()->flash('error', "Too many verification code requests. Try again in {$seconds} seconds.");
+                    return;
+                }
+
+                RateLimiter::hit($otpKey, 300);
+
                 // Generate verification code
                 $code = (string) rand(100000, 999999);
 
@@ -32,7 +58,6 @@ new class extends Component
                 );
 
                 // Dispatch Email
-                \Illuminate\Support\Facades\Log::info("Verification code for unverified login ({$user->email}): {$code}");
                 try {
                     \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerificationMail($code));
                 } catch (\Exception $e) {
@@ -54,6 +79,7 @@ new class extends Component
             return redirect()->intended('/shop');
         }
 
+        RateLimiter::hit($loginKey, 300);
         session()->flash('error', 'Invalid credentials. Please try again.');
     }
 };

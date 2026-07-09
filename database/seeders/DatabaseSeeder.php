@@ -21,7 +21,9 @@ class DatabaseSeeder extends Seeder
             'name' => 'Admin User',
             'email' => 'dppatel7955@gmail.com',
             'password' => bcrypt('admin123'),
-            'is_admin' => true,
         ]);
+        $admin->is_admin = true;
+        $admin->email_verified_at = now();
+        $admin->save();
     }
 }

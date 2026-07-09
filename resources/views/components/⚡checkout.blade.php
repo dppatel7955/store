@@ -3,9 +3,13 @@
 use Livewire\Component;
 use App\Models\Order;
 use App\Models\OrderItem;
+use App\Models\PaymentMethod;
 use App\Models\Product;
+use App\Models\ProductVariant;
 use App\Services\CartService;
 use Livewire\Attributes\On;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\Rule;
 
 new class extends Component
 {
@@ -29,9 +33,113 @@ new class extends Component
     public string $phone = '';
     public string $paymentMethod = 'cod';
     public string $notes = '';
+    public array $availablePaymentMethods = [];
+
+    protected function throttleKey(string $action): string
+    {
+        $identity = auth()->check() ? (string) auth()->id() : strtolower($this->email ?: 'guest');
+        return sprintf('checkout:%s:%s:%s', $action, $identity, request()->ip());
+    }
+
+    protected function currentProductPrice(Product $product): float
+    {
+        return (float) ($product->sale_price ?? $product->price);
+    }
+
+    protected function currentVariantPrice(ProductVariant $variant, Product $product): float
+    {
+        return (float) ($variant->sale_price ?? $variant->price ?? $this->currentProductPrice($product));
+    }
+
+    protected function syncCartFromDatabase(): bool
+    {
+        $validatedCart = [];
+        $hasPricingChanges = false;
+        $newSubtotal = 0.0;
+
+        foreach ($this->cart as $cartKey => $item) {
+            $product = Product::find($item['id'] ?? 0);
+            if (!$product || !$product->is_active) {
+                $this->addError('cart', "One of the products in your cart is unavailable. Please review your cart.");
+                return false;
+            }
+
+            $quantity = (int) ($item['quantity'] ?? 0);
+            if ($quantity <= 0) {
+                $this->addError('cart', 'Invalid cart quantity detected. Please refresh your cart.');
+                return false;
+            }
+
+            $unitAmount = $this->currentProductPrice($product);
+            $availableStock = (int) $product->stock;
+            $variantName = null;
+
+            if (!empty($item['variant_id'])) {
+                $variant = ProductVariant::where('product_id', $product->id)->find($item['variant_id']);
+                if (!$variant || !$variant->is_active) {
+                    $this->addError('cart', "A selected product variant is no longer available.");
+                    return false;
+                }
+
+                $availableStock = (int) $variant->stock;
+                $unitAmount = $this->currentVariantPrice($variant, $product);
+                $variantName = $variant->name;
+            }
+
+            if ($quantity > $availableStock) {
+                $this->addError('cart', "Insufficient stock for {$product->name}. Only {$availableStock} item(s) left.");
+                return false;
+            }
+
+            $storedUnitAmount = (float) ($item['price'] ?? 0);
+            if (round($storedUnitAmount, 2) !== round($unitAmount, 2)) {
+                $hasPricingChanges = true;
+            }
+
+            $lineTotal = round($unitAmount * $quantity, 2);
+            $newSubtotal += $lineTotal;
+
+            $validatedCart[$cartKey] = array_merge($item, [
+                'name' => $product->name,
+                'slug' => $product->slug,
+                'variant_name' => $variantName ?? ($item['variant_name'] ?? null),
+                'price' => $unitAmount,
+                'total' => $lineTotal,
+            ]);
+        }
+
+        $this->cart = $validatedCart;
+        $this->subtotal = round($newSubtotal, 2);
+
+        if ($this->appliedCoupon) {
+            $coupon = \App\Models\Coupon::where('code', $this->appliedCoupon)->first();
+            if (!$coupon || !$coupon->isValidForAmount($this->subtotal, auth()->id())) {
+                $this->appliedCoupon = null;
+                $this->discount = 0.00;
+                $this->couponCode = '';
+            } else {
+                $this->discount = (float) $coupon->calculateDiscountForCart($this->cart);
+            }
+        }
+
+        $this->recalculateTotals();
+        session()->put('cart', $this->cart);
+
+        if ($hasPricingChanges) {
+            $this->dispatch(
+                'swal',
+                title: 'Cart Updated',
+                text: 'Prices were refreshed to match current catalog rates.',
+                icon: 'info'
+            );
+        }
+
+        return true;
+    }
 
     public function mount()
     {
+        $this->loadActivePaymentMethods();
         $this->cart = CartService::get();
         if (count($this->cart) === 0) {
             return redirect()->route('shop');
@@ -46,6 +154,29 @@ new class extends Component
             $this->name = auth()->user()->name;
             $this->email = auth()->user()->email;
             $this->phone = auth()->user()->phone ?? '';
+        }
+    }
+
+    protected function loadActivePaymentMethods(): void
+    {
+        $methods = PaymentMethod::active()
+            ->orderBy('sort_order')
+            ->orderBy('name')
+            ->get();
+
+        $this->availablePaymentMethods = $methods->map(function (PaymentMethod $method) {
+            return [
+                'name' => $method->name,
+                'code' => $method->code,
+                'handler' => $method->handler,
+                'description' => $method->description,
+                'instructions' => $method->instructions,
+            ];
+        })->toArray();
+
+        $allowedCodes = array_column($this->availablePaymentMethods, 'code');
+        if (!empty($allowedCodes) && !in_array($this->paymentMethod, $allowedCodes, true)) {
+            $this->paymentMethod = $allowedCodes[0];
         }
     }
 
@@ -118,10 +249,26 @@ new class extends Component
             return redirect('/login');
         }
 
+        $this->loadActivePaymentMethods();
+
         $user = auth()->user();
 
         // Enforce email verification before placing an order
         if ($user->email_verified_at === null) {
+            $otpKey = $this->throttleKey('otp-send');
+            if (RateLimiter::tooManyAttempts($otpKey, 3)) {
+                $seconds = RateLimiter::availableIn($otpKey);
+                $this->dispatch(
+                    'swal',
+                    title: 'Please Wait',
+                    text: "Too many verification code requests. Try again in {$seconds} seconds.",
+                    icon: 'warning'
+                );
+                return;
+            }
+
+            RateLimiter::hit($otpKey, 300);
+
             // Generate verification code
             $code = (string) rand(100000, 999999);
 
@@ -136,7 +283,6 @@ new class extends Component
             );
 
             // Dispatch Email
-            \Illuminate\Support\Facades\Log::info("Verification code for unverified checkout ({$user->email}): {$code}");
             try {
                 \Illuminate\Support\Facades\Mail::to($user->email)->send(new \App\Mail\VerificationMail($code));
             } catch (\Exception $e) {
@@ -150,6 +296,17 @@ new class extends Component
             ]);
         }
 
+        if (!$this->syncCartFromDatabase()) {
+            return;
+        }
+
+        if (empty($this->availablePaymentMethods)) {
+            $this->addError('paymentMethod', 'No payment methods are currently available.');
+            return;
+        }
+
+        $allowedCodes = array_column($this->availablePaymentMethods, 'code');
+
         $this->validate([
             'name' => 'required|string|min:3',
             'email' => 'required|email',
@@ -158,8 +315,17 @@ new class extends Component
             'state' => 'required|string',
             'zip' => 'required|string',
             'phone' => 'required|numeric|digits:10',
-            'paymentMethod' => 'required|in:cod,razorpay',
+            'paymentMethod' => ['required', 'string', Rule::in($allowedCodes)],
         ]);
+
+        $selectedMethod = PaymentMethod::active()
+            ->where('code', $this->paymentMethod)
+            ->first();
+
+        if (!$selectedMethod) {
+            $this->addError('paymentMethod', 'Selected payment method is inactive or unavailable.');
+            return;
+        }
 
         $order = Order::create([
             'user_id' => auth()->id(),
@@ -210,15 +376,15 @@ new class extends Component
         }
 
         // If Razorpay, initiate online payment checkout
-        if ($this->paymentMethod === 'razorpay') {
-            $keyId = config('services.razorpay.key_id');
-            $keySecret = config('services.razorpay.key_secret');
+        if ($selectedMethod->handler === 'razorpay') {
+            $keyId = $selectedMethod->gateway_key ?: config('services.razorpay.key_id');
+            $keySecret = $selectedMethod->gateway_secret ?: config('services.razorpay.key_secret');
 
             if (empty($keyId) || empty($keySecret)) {
-                \Illuminate\Support\Facades\Log::error("Razorpay API Keys are not configured in services.php or .env.");
+                \Illuminate\Support\Facades\Log::error("Razorpay API Keys are missing for payment method code: {$selectedMethod->code}");
                 $this->dispatch('swal', 
                     title: 'Gateway Config Error', 
-                    text: 'Razorpay payment key is not configured in .env file. Please contact support.', 
+                    text: 'Razorpay credentials are not configured for this payment method. Please contact support.', 
                     icon: 'error'
                 );
                 return;
@@ -292,7 +458,29 @@ new class extends Component
     public function handleRazorpaySuccess($paymentId, $signature, $dbOrderId)
     {
         $order = Order::findOrFail($dbOrderId);
-        $keySecret = config('services.razorpay.key_secret');
+        if ((int) $order->user_id !== (int) auth()->id()) {
+            \Illuminate\Support\Facades\Log::warning("Unauthorized Razorpay callback attempt for order {$dbOrderId} by user " . auth()->id());
+            $this->dispatch(
+                'swal',
+                title: 'Unauthorized Request',
+                text: 'This order does not belong to your account.',
+                icon: 'error'
+            );
+            return;
+        }
+
+        $methodConfig = PaymentMethod::where('code', $order->payment_method)->first();
+        $keySecret = $methodConfig?->gateway_secret ?: config('services.razorpay.key_secret');
+        if (empty($keySecret)) {
+            \Illuminate\Support\Facades\Log::error("Missing Razorpay secret for order {$dbOrderId} and method {$order->payment_method}");
+            $this->dispatch(
+                'swal',
+                title: 'Payment Verification Failed',
+                text: 'Gateway configuration is missing. Please contact support.',
+                icon: 'error'
+            );
+            return;
+        }
         
         $razorpayOrderId = session('razorpay_order_id_' . $dbOrderId);
 
@@ -381,6 +569,12 @@ new class extends Component
                     </div>
                 @endif
 
+                @error('cart')
+                    <div class="rounded-xl bg-rose-50 border border-rose-200 p-4 text-xs font-semibold text-rose-700">
+                        {{ $message }}
+                    </div>
+                @enderror
+
                 <form wire:submit="placeOrder" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                     <div>
                         <label for="name" class="block text-xs font-semibold text-slate-500 mb-1.5">Full Name</label>
@@ -432,22 +626,31 @@ new class extends Component
                     <!-- Payment Options -->
                     <div class="sm:col-span-2 border-t border-slate-200 pt-6 mt-4 space-y-4">
                         <h3 class="text-sm font-bold text-slate-900">Payment Method</h3>
-                        
-                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                            <label class="flex items-center justify-between border border-slate-200 bg-slate-50 p-4 rounded-xl cursor-pointer hover:border-indigo-600 hover:shadow-sm transition select-none">
-                                <span class="flex items-center gap-3">
-                                    <input type="radio" wire:model="paymentMethod" value="cod" class="text-indigo-600 focus:ring-indigo-600">
-                                    <span class="text-sm font-semibold text-slate-850">Cash on Delivery</span>
-                                </span>
-                            </label>
-                            
-                            <label class="flex items-center justify-between border border-slate-200 bg-slate-50 p-4 rounded-xl cursor-pointer hover:border-indigo-600 hover:shadow-sm transition select-none">
-                                <span class="flex items-center gap-3">
-                                    <input type="radio" wire:model="paymentMethod" value="razorpay" class="text-indigo-600 focus:ring-indigo-600">
-                                    <span class="text-sm font-semibold text-slate-850">Razorpay (UPI / Cards / NetBanking)</span>
-                                </span>
-                            </label>
-                        </div>
+                        @if(count($availablePaymentMethods) > 0)
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                                @foreach($availablePaymentMethods as $method)
+                                    <label class="flex items-start justify-between border border-slate-200 bg-slate-50 p-4 rounded-xl cursor-pointer hover:border-indigo-600 hover:shadow-sm transition select-none">
+                                        <span class="flex items-start gap-3">
+                                            <input type="radio" wire:model="paymentMethod" value="{{ $method['code'] }}" class="mt-1 text-indigo-600 focus:ring-indigo-600">
+                                            <span class="space-y-1">
+                                                <span class="text-sm font-semibold text-slate-850">{{ $method['name'] }}</span>
+                                                @if(!empty($method['description']))
+                                                    <span class="block text-xs text-slate-500">{{ $method['description'] }}</span>
+                                                @endif
+                                                @if(!empty($method['instructions']))
+                                                    <span class="block text-[11px] text-indigo-700 font-medium">{{ $method['instructions'] }}</span>
+                                                @endif
+                                            </span>
+                                        </span>
+                                    </label>
+                                @endforeach
+                            </div>
+                        @else
+                            <div class="rounded-xl bg-amber-50 border border-amber-200 p-4 text-xs font-semibold text-amber-700">
+                                No active payment methods are available. Please contact support.
+                            </div>
+                        @endif
+                        @error('paymentMethod') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
                     </div>
 
                     <div class="sm:col-span-2 pt-6">
@@ -456,7 +659,7 @@ new class extends Component
                             wire:loading.attr="disabled"
                             wire:target="placeOrder"
                             class="w-full rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 py-3.5 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition duration-300 flex items-center justify-center gap-2"
-                            {{ !auth()->check() ? 'disabled' : '' }}
+                            {{ (!auth()->check() || count($availablePaymentMethods) === 0) ? 'disabled' : '' }}
                         >
                             <span wire:loading.remove wire:target="placeOrder">
                                 Place Order (₹{{ number_format($grandTotal) }})

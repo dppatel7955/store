@@ -11,7 +11,7 @@ new class extends Component
 
     public function mount(int $id)
     {
-        $this->order = Order::with(['user', 'items.product'])->findOrFail($id);
+        $this->order = Order::with(['user', 'items.product', 'paymentMethodConfig'])->findOrFail($id);
         $this->status = $this->order->status;
         $this->payment_status = $this->order->payment_status;
     }
@@ -230,7 +230,7 @@ new class extends Component
                 <div class="border-t border-slate-200 pt-4 text-xs text-slate-500 space-y-2">
                     <div class="flex justify-between">
                         <span>Payment Method:</span>
-                        <span class="font-bold text-slate-700 uppercase">{{ $order->payment_method }}</span>
+                        <span class="font-bold text-slate-700">{{ $order->paymentMethodConfig->name ?? strtoupper($order->payment_method) }}</span>
                     </div>
                     <div class="flex justify-between">
                         <span>Shipment Method:</span>

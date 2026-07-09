@@ -6,6 +6,7 @@ use App\Models\VerificationCode;
 use App\Mail\VerificationMail;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
 
 new class extends Component
 {
@@ -16,7 +17,7 @@ new class extends Component
     public function mount()
     {
         $this->email = (string) request()->query('email', '');
-        $this->redirect = (string) request()->query('redirect', '/shop');
+        $this->redirect = $this->sanitizeRedirect((string) request()->query('redirect', '/shop'));
         
         // If email is empty, check if user is already logged in
         if (empty($this->email) && auth()->check()) {
@@ -24,8 +25,37 @@ new class extends Component
         }
     }
 
+    protected function sanitizeRedirect(string $redirect): string
+    {
+        $path = trim($redirect);
+        if ($path === '' || str_starts_with($path, '//')) {
+            return '/shop';
+        }
+
+        $parsed = parse_url($path);
+        if (($parsed['scheme'] ?? null) || ($parsed['host'] ?? null)) {
+            return '/shop';
+        }
+
+        return str_starts_with($path, '/') ? $path : '/shop';
+    }
+
+    protected function throttleKey(string $action): string
+    {
+        return sprintf('verify-email:%s:%s:%s', $action, strtolower($this->email ?: 'guest'), request()->ip());
+    }
+
     public function verify()
     {
+        $verifyKey = $this->throttleKey('verify');
+        if (RateLimiter::tooManyAttempts($verifyKey, 10)) {
+            $seconds = RateLimiter::availableIn($verifyKey);
+            $this->addError('enteredOtp', "Too many verification attempts. Try again in {$seconds} seconds.");
+            return;
+        }
+
+        RateLimiter::hit($verifyKey, 300);
+
         $this->validate([
             'email' => 'required|email|exists:users,email',
             'enteredOtp' => 'required|numeric|digits:6',
@@ -51,7 +81,8 @@ new class extends Component
         // Mark user as verified
         $user = User::where('email', $this->email)->first();
         if ($user) {
-            $user->update(['email_verified_at' => now()]);
+            $user->email_verified_at = now();
+            $user->save();
             
             // Login user if not authenticated
             if (!auth()->check() || auth()->user()->id !== $user->id) {
@@ -66,6 +97,15 @@ new class extends Component
 
     public function resend()
     {
+        $resendKey = $this->throttleKey('resend');
+        if (RateLimiter::tooManyAttempts($resendKey, 3)) {
+            $seconds = RateLimiter::availableIn($resendKey);
+            $this->addError('email', "Too many resend requests. Try again in {$seconds} seconds.");
+            return;
+        }
+
+        RateLimiter::hit($resendKey, 300);
+
         $this->validate([
             'email' => 'required|email|exists:users,email',
         ]);
@@ -84,8 +124,6 @@ new class extends Component
         );
 
         // Send Email
-        Log::info("Resending verification code to (Email: {$this->email}): {$code}");
-        
         try {
             Mail::to($this->email)->send(new VerificationMail($code));
             

@@ -40,4 +40,9 @@ class Order extends Model
     {
         return $this->hasMany(OrderItem::class);
     }
+
+    public function paymentMethodConfig()
+    {
+        return $this->belongsTo(PaymentMethod::class, 'payment_method', 'code');
+    }
 }

@@ -58,7 +58,7 @@
             </div>
             <div class="sm:text-right">
                 <h3 class="text-[10px] uppercase font-bold text-slate-400 tracking-wider mb-2">Payment Info</h3>
-                <p class="text-xs text-slate-800"><span class="font-semibold text-slate-450">Method:</span> <span class="uppercase font-bold">{{ $order->payment_method }}</span></p>
+                <p class="text-xs text-slate-800"><span class="font-semibold text-slate-450">Method:</span> <span class="font-bold">{{ $order->paymentMethodConfig->name ?? strtoupper($order->payment_method) }}</span></p>
                 <p class="text-xs text-slate-800 mt-1"><span class="font-semibold text-slate-450">Status:</span> <span class="capitalize font-bold">{{ $order->payment_status }}</span></p>
                 <p class="text-xs text-slate-850 mt-1.5"><span class="font-semibold text-slate-450">Order ID:</span> #{{ $order->id }}</p>
             </div>

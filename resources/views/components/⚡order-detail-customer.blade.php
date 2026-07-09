@@ -11,7 +11,7 @@ new class extends Component
     public function mount(int $id)
     {
         $this->id = $id;
-        $this->order = Order::with(['items.product'])->where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $this->order = Order::with(['items.product', 'paymentMethodConfig'])->where('id', $id)->where('user_id', auth()->id())->firstOrFail();
     }
 };
 ?>
@@ -210,7 +210,7 @@ new class extends Component
                 <div class="space-y-3.5 text-xs">
                     <div>
                         <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Method</span>
-                        <span class="block text-slate-850 font-bold mt-0.5 capitalize">{{ $order->payment_method === 'cod' ? 'Cash on Delivery' : ($order->payment_method === 'razorpay' ? 'Razorpay Online Payment' : $order->payment_method) }}</span>
+                        <span class="block text-slate-850 font-bold mt-0.5">{{ $order->paymentMethodConfig->name ?? strtoupper($order->payment_method) }}</span>
                     </div>
                     <div>
                         <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Status</span>

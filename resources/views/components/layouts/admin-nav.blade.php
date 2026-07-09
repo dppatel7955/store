@@ -78,3 +78,12 @@
         Home Settings
     </a>
 </li>
+
+<li>
+    <a href="{{ route('admin.payment-methods') }}" class="group flex gap-x-3 rounded-md p-2 text-sm leading-6 font-semibold {{ request()->is('admin/payment-methods*') ? 'bg-indigo-50 text-indigo-700 border-l-4 border-indigo-600' : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50' }}">
+        <svg class="h-6 w-6 shrink-0" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 9V7a5 5 0 00-10 0v2M5 9h14l-1 10a2 2 0 01-2 2H8a2 2 0 01-2-2L5 9z" />
+        </svg>
+        Payment Methods
+    </a>
+</li>

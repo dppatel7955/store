@@ -110,8 +110,11 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/home-settings', function () {
         return view('pages.admin.home-settings');
     })->name('admin.home-settings');
+    Route::get('/admin/payment-methods', function () {
+        return view('pages.admin.payment-methods');
+    })->name('admin.payment-methods');
     Route::get('/admin/orders/{id}/invoice', function ($id) {
-        $order = \App\Models\Order::with(['items.product'])->findOrFail($id);
+        $order = \App\Models\Order::with(['items.product', 'paymentMethodConfig'])->findOrFail($id);
         return view('pages.admin.invoice', compact('order'));
     })->name('admin.orders.invoice');
 });
@@ -125,7 +128,12 @@ Route::get('/terms-of-service', function () {
 })->name('terms-of-service');
 
 Route::get('/payment-methods', function () {
-    return view('pages.payment-methods');
+    $paymentMethods = \App\Models\PaymentMethod::active()
+        ->orderBy('sort_order')
+        ->orderBy('name')
+        ->get();
+
+    return view('pages.payment-methods', compact('paymentMethods'));
 })->name('payment-methods');
 
 Route::get('/shipping-policy', function () {

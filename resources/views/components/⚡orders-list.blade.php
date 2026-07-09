@@ -13,6 +13,7 @@ new class extends Component
     public function orders()
     {
         return Order::where('user_id', auth()->id())
+            ->with('paymentMethodConfig')
             ->latest('id')
             ->paginate(10);
     }
@@ -53,8 +54,8 @@ new class extends Component
                                 </td>
                                 
                                 <!-- Payment Method -->
-                                <td class="p-4 text-slate-600 uppercase font-semibold">
-                                    {{ $order->payment_method }}
+                                <td class="p-4 text-slate-600 font-semibold">
+                                    {{ $order->paymentMethodConfig->name ?? strtoupper($order->payment_method) }}
                                 </td>
                                 
                                 <!-- Payment Status -->

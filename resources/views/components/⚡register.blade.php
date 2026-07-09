@@ -7,6 +7,8 @@ use App\Mail\VerificationMail;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Validation\ValidationException;
 
 new class extends Component
 {
@@ -17,17 +19,33 @@ new class extends Component
 
     // OTP State
     public bool $otpSent = false;
-    public string $generatedOtp = '';
+    protected string $generatedOtp = '';
     public string $enteredOtp = '';
+
+    protected function enforceRateLimit(string $action, int $maxAttempts, int $decaySeconds): void
+    {
+        $key = sprintf(
+            'register:%s:%s:%s',
+            $action,
+            strtolower($this->email ?: 'guest'),
+            request()->ip()
+        );
+
+        if (RateLimiter::tooManyAttempts($key, $maxAttempts)) {
+            $seconds = RateLimiter::availableIn($key);
+            throw ValidationException::withMessages([
+                'email' => "Too many attempts. Please try again in {$seconds} seconds.",
+            ]);
+        }
+
+        RateLimiter::hit($key, $decaySeconds);
+    }
 
     /**
      * Dispatch verification code email to customer.
      */
     protected function sendVerificationEmail(string $email, string $code)
     {
-        // Log locally as a backup
-        Log::info("Verification code for customer registration (Email: {$email}): {$code}");
-
         try {
             Mail::to($email)->send(new VerificationMail($code));
         } catch (\Exception $e) {
@@ -43,6 +61,8 @@ new class extends Component
 
     public function sendOtp()
     {
+        $this->enforceRateLimit('send-otp', 5, 300);
+
         $this->validate([
             'name' => 'required|string|min:3|max:50',
             'email' => 'required|email|unique:users,email',
@@ -77,6 +97,8 @@ new class extends Component
 
     public function verifyAndRegister()
     {
+        $this->enforceRateLimit('verify-otp', 8, 300);
+
         $this->validate([
             'enteredOtp' => 'required|numeric|digits:6',
         ]);
@@ -104,9 +126,9 @@ new class extends Component
             'email' => $this->email,
             'phone' => $this->phone,
             'password' => Hash::make($this->password),
-            'is_admin' => false,
-            'email_verified_at' => now()
         ]);
+        $user->email_verified_at = now();
+        $user->save();
 
         auth()->login($user);
 
@@ -118,6 +140,8 @@ new class extends Component
 
     public function resendOtp()
     {
+        $this->enforceRateLimit('resend-otp', 3, 300);
+
         $this->generatedOtp = (string) rand(100000, 999999);
         $this->enteredOtp = '';
 

@@ -9,7 +9,7 @@ new class extends Component
 
     public function mount(int $id)
     {
-        $this->order = Order::with(['items.product'])->where('user_id', auth()->id())->findOrFail($id);
+        $this->order = Order::with(['items.product', 'paymentMethodConfig'])->where('user_id', auth()->id())->findOrFail($id);
     }
 };
 ?>
@@ -123,7 +123,7 @@ new class extends Component
                             </div>
                             <div>
                                 <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Mode</span>
-                                <span class="font-bold text-indigo-750 uppercase">{{ $order->payment_method }}</span>
+                                <span class="font-bold text-indigo-750">{{ $order->paymentMethodConfig->name ?? strtoupper($order->payment_method) }}</span>
                             </div>
                             <div>
                                 <span class="block text-[10px] uppercase font-bold text-slate-400">Payment Status</span>
