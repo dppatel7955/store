@@ -462,20 +462,65 @@ new class extends Component
                 
                 <!-- Variant Selectors -->
                 @if($product->variants->count() > 0)
+                    @php
+                        $variantType = $product->variant_type ?? 'other';
+                        $variantTypeLabel = $product->variantTypeLabel();
+                    @endphp
                     <div class="mt-6 space-y-3">
-                        <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider">Select Options</label>
+                        <label class="block text-xs font-bold text-slate-800 uppercase tracking-wider">Select {{ $variantTypeLabel }}</label>
                         <div class="flex flex-wrap gap-2">
                             @foreach($product->variants as $var)
-                                <button 
-                                    type="button"
-                                    @click="selectVariant({{ $var->id }})"
-                                    :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
-                                    class="px-4 py-2.5 text-xs font-semibold border rounded-xl shadow-sm transition duration-150"
-                                >
-                                    {{ $var->name }}
-                                </button>
+                                @if($variantType === 'color')
+                                    @php $hex = $var->colorHex() ?? '#CCCCCC'; @endphp
+                                    <button
+                                        type="button"
+                                        @click="selectVariant({{ $var->id }})"
+                                        :class="selectedVariantId === {{ $var->id }} ? 'ring-2 ring-indigo-500 ring-offset-2 border-indigo-500' : 'border-slate-300 hover:border-slate-400'"
+                                        class="group relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white p-0.5 shadow-sm transition duration-150"
+                                        title="{{ $var->name }}"
+                                        aria-label="{{ $var->name }}"
+                                    >
+                                        <span class="block h-full w-full rounded-full border border-black/10" style="background-color: {{ $hex }};"></span>
+                                    </button>
+                                @elseif($variantType === 'size')
+                                    <button
+                                        type="button"
+                                        @click="selectVariant({{ $var->id }})"
+                                        :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                        class="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border px-3 py-2 text-sm font-bold uppercase tracking-wide shadow-sm transition duration-150"
+                                    >
+                                        {{ $var->displayValue() }}
+                                    </button>
+                                @elseif($variantType === 'weight')
+                                    <button
+                                        type="button"
+                                        @click="selectVariant({{ $var->id }})"
+                                        :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                        class="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-xs font-semibold shadow-sm transition duration-150"
+                                    >
+                                        <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.75" d="M3 6h18M7 12h10M10 18h4" />
+                                        </svg>
+                                        <span>{{ $var->displayValue() }}</span>
+                                    </button>
+                                @else
+                                    <button
+                                        type="button"
+                                        @click="selectVariant({{ $var->id }})"
+                                        :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                        class="px-4 py-2.5 text-xs font-semibold border rounded-xl shadow-sm transition duration-150"
+                                    >
+                                        {{ $var->name }}
+                                    </button>
+                                @endif
                             @endforeach
                         </div>
+                        @if($variantType === 'color')
+                            <p class="text-xs text-slate-500">
+                                Selected:
+                                <span class="font-semibold text-slate-700" x-text="(variants.find(v => v.id == selectedVariantId) || {}).name || ''"></span>
+                            </p>
+                        @endif
                     </div>
                 @endif
                 

@@ -10,6 +10,11 @@ class Product extends Model
     /** @use HasFactory<\Database\Factories\ProductFactory> */
     use HasFactory;
 
+    public const VARIANT_TYPE_COLOR = 'color';
+    public const VARIANT_TYPE_SIZE = 'size';
+    public const VARIANT_TYPE_WEIGHT = 'weight';
+    public const VARIANT_TYPE_OTHER = 'other';
+
     protected $fillable = [
         'name',
         'slug',
@@ -25,6 +30,7 @@ class Product extends Model
         'is_featured',
         'category_id',
         'brand_id',
+        'variant_type',
     ];
 
     protected $casts = [
@@ -58,5 +64,20 @@ class Product extends Model
     public function variants()
     {
         return $this->hasMany(ProductVariant::class);
+    }
+
+    public static function variantTypes(): array
+    {
+        return [
+            self::VARIANT_TYPE_COLOR => 'Color',
+            self::VARIANT_TYPE_SIZE => 'Size',
+            self::VARIANT_TYPE_WEIGHT => 'Weight',
+            self::VARIANT_TYPE_OTHER => 'Other',
+        ];
+    }
+
+    public function variantTypeLabel(): string
+    {
+        return self::variantTypes()[$this->variant_type] ?? 'Option';
     }
 }

@@ -31,6 +31,7 @@ new class extends Component
     public $is_featured = false;
 
     // Variants field
+    public string $variant_type = 'other';
     public array $variants = [];
     public array $tempImages = []; // index-based variant image uploads (array of arrays)
 
@@ -74,6 +75,7 @@ new class extends Component
     {
         $this->variants[] = [
             'name' => '',
+            'value' => '',
             'sku' => '',
             'price' => $this->price ?? '',
             'sale_price' => $this->sale_price ?? '',
@@ -118,8 +120,10 @@ new class extends Component
             'brand_id' => 'nullable|exists:brands,id',
             'is_active' => 'required|boolean',
             'is_featured' => 'required|boolean',
+            'variant_type' => 'required|in:color,size,weight,other',
             // Variants validation
             'variants.*.name' => 'required|min:1|max:255',
+            'variants.*.value' => 'nullable|max:50',
             'variants.*.sku' => 'nullable|max:100',
             'variants.*.price' => 'nullable|numeric|min:0',
             'variants.*.sale_price' => 'nullable|numeric|min:0|lt:variants.*.price',
@@ -129,6 +133,16 @@ new class extends Component
             'imagesList.required_without' => 'Please upload an image or add at least one image URL.',
             'variants.*.name.required' => 'Variant option details/name is required.',
         ]);
+
+        if ($this->variant_type === 'color' && count($this->variants) > 0) {
+            foreach ($this->variants as $index => $variantData) {
+                $color = trim((string) ($variantData['value'] ?? ''));
+                if (! preg_match('/^#[0-9A-Fa-f]{6}$/', $color)) {
+                    $this->addError("variants.$index.value", 'Pick a valid color for each variant.');
+                    return;
+                }
+            }
+        }
 
         // Upload main images
         if ($this->imageFiles) {
@@ -168,6 +182,7 @@ new class extends Component
             'brand_id' => $this->brand_id ?: null,
             'is_active' => $this->is_active,
             'is_featured' => $this->is_featured,
+            'variant_type' => $this->variant_type,
         ]);
 
         // Save variants
@@ -183,6 +198,7 @@ new class extends Component
             ProductVariant::create([
                 'product_id' => $product->id,
                 'name' => $variantData['name'],
+                'value' => $variantData['value'] ?: null,
                 'sku' => $variantData['sku'] ?: ($finalSku . '-' . strtoupper(Str::random(4))),
                 'price' => $variantData['price'] ?: null,
                 'sale_price' => $variantData['sale_price'] ?: null,
@@ -316,6 +332,26 @@ new class extends Component
                         <p class="text-[10px] text-slate-400 mt-0.5">Click Add Variant to set up variations like size, color, storage, RAM, etc.</p>
                     </div>
                 @else
+                    <div class="rounded-xl border border-indigo-100 bg-indigo-50/40 p-4">
+                        <label class="block text-[10px] font-semibold text-slate-600 mb-1.5">Variant Type</label>
+                        <select wire:model.live="variant_type" class="w-full sm:w-64 bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition">
+                            @foreach(\App\Models\Product::variantTypes() as $typeKey => $typeLabel)
+                                <option value="{{ $typeKey }}">{{ $typeLabel }}</option>
+                            @endforeach
+                        </select>
+                        <p class="text-[10px] text-slate-500 mt-1">
+                            @if($variant_type === 'color')
+                                Customers will see color swatches. Set a color code and optional label (e.g. Red).
+                            @elseif($variant_type === 'size')
+                                Customers will see size buttons (e.g. S, M, L, XL).
+                            @elseif($variant_type === 'weight')
+                                Customers will see weight options (e.g. 250g, 500g, 1kg).
+                            @else
+                                Customers will see standard option buttons with the variant name.
+                            @endif
+                        </p>
+                    </div>
+
                     <div class="space-y-4">
                         @foreach($variants as $index => $variant)
                             <div class="p-4 bg-slate-50 border border-slate-200 rounded-xl space-y-4 relative">
@@ -328,17 +364,65 @@ new class extends Component
                                 </div>
 
                                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-[10px] font-semibold text-slate-600 mb-1">Option Values / Name <span class="text-rose-500">*</span></label>
-                                        <input type="text" wire:model="variants.{{ $index }}.name" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="e.g. 16GB RAM / 512GB SSD">
-                                        @error('variants.'.$index.'.name') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
-                                    </div>
+                                    @if($variant_type === 'color')
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Color <span class="text-rose-500">*</span></label>
+                                            <div class="flex items-center gap-2">
+                                                <input type="color" wire:model="variants.{{ $index }}.value" class="h-9 w-12 cursor-pointer rounded-lg border border-slate-200 bg-white p-0.5">
+                                                <input type="text" wire:model="variants.{{ $index }}.value" class="flex-1 bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="#FF0000">
+                                            </div>
+                                            @error('variants.'.$index.'.value') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Color Label <span class="text-rose-500">*</span></label>
+                                            <input type="text" wire:model="variants.{{ $index }}.name" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="e.g. Red, Navy Blue">
+                                            @error('variants.'.$index.'.name') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                    @elseif($variant_type === 'size')
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Size <span class="text-rose-500">*</span></label>
+                                            <input type="text" wire:model="variants.{{ $index }}.name" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="e.g. S, M, L, XL">
+                                            @error('variants.'.$index.'.name') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Variant SKU</label>
+                                            <input type="text" wire:model="variants.{{ $index }}.sku" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="Auto-generated if blank">
+                                            @error('variants.'.$index.'.sku') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                    @elseif($variant_type === 'weight')
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Weight <span class="text-rose-500">*</span></label>
+                                            <input type="text" wire:model="variants.{{ $index }}.name" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="e.g. 250g, 500g, 1kg">
+                                            @error('variants.'.$index.'.name') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Variant SKU</label>
+                                            <input type="text" wire:model="variants.{{ $index }}.sku" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="Auto-generated if blank">
+                                            @error('variants.'.$index.'.sku') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                    @else
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Option Values / Name <span class="text-rose-500">*</span></label>
+                                            <input type="text" wire:model="variants.{{ $index }}.name" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="e.g. 16GB RAM / 512GB SSD">
+                                            @error('variants.'.$index.'.name') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-semibold text-slate-600 mb-1">Variant SKU</label>
+                                            <input type="text" wire:model="variants.{{ $index }}.sku" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="Auto-generated if blank">
+                                            @error('variants.'.$index.'.sku') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
+                                        </div>
+                                    @endif
+                                </div>
+
+                                @if($variant_type === 'color')
+                                <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
                                     <div>
                                         <label class="block text-[10px] font-semibold text-slate-600 mb-1">Variant SKU</label>
                                         <input type="text" wire:model="variants.{{ $index }}.sku" class="w-full bg-white border border-slate-200 rounded-lg py-1.5 px-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition" placeholder="Auto-generated if blank">
                                         @error('variants.'.$index.'.sku') <span class="text-rose-500 text-[9px] font-bold mt-0.5 block">{{ $message }}</span> @enderror
                                     </div>
                                 </div>
+                                @endif
 
                                  <div class="grid grid-cols-1 sm:grid-cols-4 gap-4">
                                      <div>
