@@ -4,6 +4,8 @@ use Livewire\Component;
 use Livewire\WithFileUploads;
 use App\Models\Banner;
 use App\Models\Product;
+use App\Services\HomeSettingsService;
+use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 
 new class extends Component
@@ -103,8 +105,17 @@ new class extends Component
         ];
 
         file_put_contents(storage_path('app/home_settings.json'), json_encode($settings, JSON_PRETTY_PRINT));
+        $this->clearHomeCache();
 
         $this->dispatch('swal', title: 'Saved!', text: 'Homepage slider sections updated successfully.', icon: 'success');
+    }
+
+    public function clearHomeCache(): void
+    {
+        HomeSettingsService::clearCache();
+        Cache::forget('home_categories');
+        Cache::forget('home_brands');
+        Cache::forget('home_banners');
     }
 
     public function save()
@@ -127,6 +138,7 @@ new class extends Component
         }
 
         $this->loadBanners();
+        $this->clearHomeCache();
         $this->dispatch('swal', title: 'Saved!', text: 'Banner changes saved successfully.', icon: 'success');
     }
 
@@ -152,6 +164,7 @@ new class extends Component
         $this->newBannerSortOrder = 0;
 
         $this->loadBanners();
+        $this->clearHomeCache();
         $this->dispatch('swal', title: 'Uploaded!', text: 'New banner added successfully.', icon: 'success');
     }
 
@@ -165,6 +178,7 @@ new class extends Component
         }
 
         $this->loadBanners();
+        $this->clearHomeCache();
         $this->dispatch('swal', title: 'Deleted!', text: 'Banner removed successfully.', icon: 'success');
     }
 

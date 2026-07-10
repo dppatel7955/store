@@ -32,6 +32,7 @@ new class extends Component
         $this->relatedProducts = Product::where('category_id', $this->product->category_id)
             ->where('id', '!=', $this->product->id)
             ->where('is_active', true)
+            ->with('brand')
             ->limit(4)
             ->get();
     }
@@ -125,7 +126,7 @@ new class extends Component
     }
     public function getAverageRatingProperty()
     {
-        return round($this->product->reviews()->avg('rating'), 1);
+        return round($this->product->reviews->avg('rating') ?? 0, 1);
     }
 };
 ?>

@@ -1,3 +1,20 @@
+@props([
+    'title' => null,
+    'metaDescription' => null,
+    'canonical' => null,
+    'noindex' => null,
+    'ogType' => null,
+])
+
+@php
+    $seo = \App\Services\SeoService::resolve(
+        title: $title,
+        metaDescription: $metaDescription,
+        canonical: $canonical,
+        noindex: $noindex,
+        ogType: $ogType,
+    );
+@endphp
 <!DOCTYPE html>
 <html lang="{{ str_replace('_', '-', app()->getLocale()) }}" class="h-full bg-slate-50 text-slate-900 selection:bg-indigo-500 selection:text-white">
 <head>
@@ -9,58 +26,25 @@
     <link rel="icon" type="image/x-icon" href="{{ asset('favicon.ico') }}">
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
 
-    @php
-        $slug = request()->route('slug');
-        $product = null;
-        if (request()->routeIs('shop.detail') && $slug) {
-            $product = \App\Models\Product::where('slug', $slug)->first();
-        }
-
-        $seoTitle = $title ?? match(true) {
-            $product !== null => $product->name . ' - Saffron Store',
-            request()->is('shop') => 'Shop Premium Products - Saffron Store',
-            request()->is('checkout') => 'Checkout - Saffron Store',
-            request()->is('orders*') => 'My Orders - Saffron Store',
-            request()->is('login') => 'Login - Saffron Store',
-            default => 'Saffron Store - Premium Online Shopping Hub'
-        };
-
-        $seoDesc = $metaDescription ?? match(true) {
-            $product !== null => $product->short_description ? strip_tags($product->short_description) : 'Buy ' . $product->name . ' at Saffron Store. Check reviews, stock levels, and specs.',
-            request()->is('shop') => 'Browse premium products, hot deals, and exclusive catalogs with quick shipping.',
-            request()->is('checkout') => 'Secure checkout portal for Saffron Store purchases.',
-            request()->is('orders*') => 'Track your placed orders, invoices, and shipment status.',
-            default => 'Discover premium products at Saffron Store. Fast deliveries, secure payments, and expert local customer service.'
-        };
-
-        $seoImage = '';
-        if ($product !== null && is_array($product->images) && count($product->images) > 0) {
-            $firstImg = $product->images[0];
-            $seoImage = str_starts_with($firstImg, 'http') ? $firstImg : asset($firstImg);
-        } else {
-            try {
-                $settingsPath = storage_path('app/home_settings.json');
-                if (file_exists($settingsPath)) {
-                    $settings = json_decode(file_get_contents($settingsPath), true);
-                    if (!empty($settings['banner_image'])) {
-                        $seoImage = asset($settings['banner_image']);
-                    }
-                }
-            } catch (\Throwable $e) {}
-        }
-    @endphp
-
-    <title>{{ $seoTitle }}</title>
-    <meta name="description" content="{{ $seoDesc }}">
+    <title>{{ $seo['title'] }}</title>
+    <meta name="description" content="{{ $seo['description'] }}">
+    <link rel="canonical" href="{{ $seo['canonical'] }}">
+    @if($seo['noindex'])
+        <meta name="robots" content="noindex, nofollow">
+    @else
+        <meta name="robots" content="index, follow">
+    @endif
 
     <!-- Open Graph / Facebook / Instagram / WhatsApp / Messages -->
-    <meta property="og:type" content="website">
-    <meta property="og:url" content="{{ url()->current() }}">
-    <meta property="og:title" content="{{ $seoTitle }}">
-    <meta property="og:description" content="{{ $seoDesc }}">
-    @if(!empty($seoImage))
-        <meta property="og:image" content="{{ $seoImage }}">
-        <meta property="og:image:secure_url" content="{{ $seoImage }}">
+    <meta property="og:site_name" content="{{ \App\Services\SeoService::STORE_NAME }}">
+    <meta property="og:locale" content="{{ str_replace('_', '-', app()->getLocale()) }}">
+    <meta property="og:type" content="{{ $seo['og_type'] }}">
+    <meta property="og:url" content="{{ $seo['canonical'] }}">
+    <meta property="og:title" content="{{ $seo['title'] }}">
+    <meta property="og:description" content="{{ $seo['description'] }}">
+    @if(!empty($seo['image']))
+        <meta property="og:image" content="{{ $seo['image'] }}">
+        <meta property="og:image:secure_url" content="{{ $seo['image'] }}">
         <meta property="og:image:type" content="image/jpeg">
         <meta property="og:image:width" content="1200">
         <meta property="og:image:height" content="630">
@@ -68,12 +52,16 @@
 
     <!-- Twitter -->
     <meta name="twitter:card" content="summary_large_image">
-    <meta name="twitter:url" content="{{ url()->current() }}">
-    <meta name="twitter:title" content="{{ $seoTitle }}">
-    <meta name="twitter:description" content="{{ $seoDesc }}">
-    @if(!empty($seoImage))
-        <meta name="twitter:image" content="{{ $seoImage }}">
+    <meta name="twitter:url" content="{{ $seo['canonical'] }}">
+    <meta name="twitter:title" content="{{ $seo['title'] }}">
+    <meta name="twitter:description" content="{{ $seo['description'] }}">
+    @if(!empty($seo['image']))
+        <meta name="twitter:image" content="{{ $seo['image'] }}">
     @endif
+
+    @foreach($seo['structured_data'] as $schema)
+        <script type="application/ld+json">{!! json_encode($schema, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) !!}</script>
+    @endforeach
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -365,8 +353,8 @@
                 <div>
                     <h4 class="text-sm font-semibold text-slate-200 uppercase tracking-wider mb-4">Shop</h4>
                     <ul class="space-y-2 text-sm text-slate-400">
-                        @foreach (\App\Models\Category::where('is_active',1)->inRandomOrder()->limit(5)->get() as $item)    
-                            <li><a href="{{ route('shop', ['category' => $item->slug]) }}" class="hover:text-indigo-400 transition">{{$item->name}}</a></li>
+                        @foreach ($footerCategories as $item)
+                            <li><a href="{{ route('shop', ['category' => $item->slug]) }}" class="hover:text-indigo-400 transition">{{ $item->name }}</a></li>
                         @endforeach
                     </ul>
                 </div>

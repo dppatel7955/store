@@ -10,6 +10,7 @@
     <link rel="icon" type="image/svg+xml" href="{{ asset('favicon.svg') }}">
 
     <title>{{ $title ?? 'SAFFRON STORE Admin Panel' }}</title>
+    <meta name="robots" content="noindex, nofollow">
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">

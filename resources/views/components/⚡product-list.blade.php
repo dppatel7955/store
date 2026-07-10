@@ -264,7 +264,7 @@ new class extends Component
         </aside>
 
         <!-- Products List Grid -->
-        <main class="lg:col-span-3 space-y-8">
+        <div class="lg:col-span-3 space-y-8">
             @if($this->products->count() > 0)
                 <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
                     @foreach($this->products as $prod)
@@ -328,6 +328,6 @@ new class extends Component
                     </button>
                 </div>
             @endif
-        </main>
+        </div>
     </div>
 </div></div>

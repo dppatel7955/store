@@ -78,7 +78,7 @@ new class extends Component
 <div class="max-w-md mx-auto my-16 px-4">
     <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
         <div class="text-center">
-            <h2 class="text-2xl font-extrabold text-slate-900">Sign In</h2>
+            <h1 class="text-2xl font-extrabold text-slate-900">Sign In</h1>
             <p class="text-xs text-slate-500 mt-1">Sign in to checkout and review products</p>
         </div>
 

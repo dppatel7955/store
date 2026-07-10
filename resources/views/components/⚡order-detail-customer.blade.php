@@ -11,7 +11,7 @@ new class extends Component
     public function mount(int $id)
     {
         $this->id = $id;
-        $this->order = Order::with(['items.product', 'paymentMethodConfig'])->where('id', $id)->where('user_id', auth()->id())->firstOrFail();
+        $this->order = Order::with(['items.product', 'items.variant', 'paymentMethodConfig'])->where('id', $id)->where('user_id', auth()->id())->firstOrFail();
     }
 };
 ?>

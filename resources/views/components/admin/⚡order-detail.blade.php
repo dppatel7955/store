@@ -11,7 +11,7 @@ new class extends Component
 
     public function mount(int $id)
     {
-        $this->order = Order::with(['user', 'items.product', 'paymentMethodConfig'])->findOrFail($id);
+        $this->order = Order::with(['user', 'items.product', 'items.variant', 'paymentMethodConfig'])->findOrFail($id);
         $this->status = $this->order->status;
         $this->payment_status = $this->order->payment_status;
     }

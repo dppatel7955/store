@@ -6,6 +6,8 @@ use App\Models\Category;
 use App\Models\Brand;
 use App\Models\Banner;
 use App\Services\CartService;
+use App\Services\HomeSettingsService;
+use Illuminate\Support\Facades\Cache;
 
 new class extends Component
 {
@@ -16,55 +18,45 @@ new class extends Component
 
     public function mount()
     {
-        $this->categories = Category::with('children')
-            ->whereNull('parent_id')
-            ->where('is_active', true)
-            ->get();
+        $this->categories = Cache::remember('home_categories', 3600, function () {
+            return Category::with('children')
+                ->whereNull('parent_id')
+                ->where('is_active', true)
+                ->get();
+        });
 
-        $this->brands = Brand::where('is_active', true)
-            ->select(['id', 'name', 'slug', 'logo'])
-            ->get();
+        $this->brands = Cache::remember('home_brands', 3600, function () {
+            return Brand::where('is_active', true)
+                ->select(['id', 'name', 'slug', 'logo'])
+                ->get();
+        });
 
-        // Default slider settings
-        $settingsPath = storage_path('app/home_settings.json');
-        $sliders = [];
-        if (file_exists($settingsPath)) {
-            $settings = json_decode(file_get_contents($settingsPath), true);
-            if ($settings && isset($settings['sliders'])) {
-                $sliders = $settings['sliders'];
-            }
-        }
+        $sliders = HomeSettingsService::sliders();
+        $selectedProductIds = collect($sliders)
+            ->where('mode', 'selected')
+            ->flatMap(fn ($slider) => $slider['product_ids'] ?? [])
+            ->unique()
+            ->values()
+            ->all();
 
-        if (empty($sliders)) {
-            $sliders = [
-                [
-                    'id' => 'new_arrivals',
-                    'title' => 'New Arrivals',
-                    'subtitle' => 'Explore our latest high-performance releases.',
-                    'mode' => 'latest',
-                    'limit' => 4,
-                    'product_ids' => []
-                ],
-                [
-                    'id' => 'featured',
-                    'title' => 'Featured Products',
-                    'subtitle' => 'Curated collection of our best premium products.',
-                    'mode' => 'featured',
-                    'limit' => 4,
-                    'product_ids' => []
-                ]
-            ];
+        $selectedProducts = collect();
+        if (! empty($selectedProductIds)) {
+            $selectedProducts = Product::with('brand')
+                ->whereIn('id', $selectedProductIds)
+                ->where('is_active', true)
+                ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
+                ->get()
+                ->keyBy('id');
         }
 
         $this->slidersData = [];
         foreach ($sliders as $slider) {
-            $products = [];
+            $products = collect();
+
             if ($slider['mode'] === 'selected') {
-                $products = Product::with('brand')
-                    ->whereIn('id', $slider['product_ids'] ?? [])
-                    ->where('is_active', true)
-                    ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
-                    ->get();
+                $products = collect($slider['product_ids'] ?? [])
+                    ->map(fn ($id) => $selectedProducts->get($id))
+                    ->filter();
             } elseif ($slider['mode'] === 'featured') {
                 $products = Product::with('brand')
                     ->where('is_active', true)
@@ -72,7 +64,7 @@ new class extends Component
                     ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
                     ->limit($slider['limit'])
                     ->get();
-            } else { // latest
+            } else {
                 $products = Product::with('brand')
                     ->where('is_active', true)
                     ->select(['id', 'name', 'slug', 'price', 'sale_price', 'images', 'short_description', 'brand_id'])
@@ -86,17 +78,18 @@ new class extends Component
                     'id' => $slider['id'],
                     'title' => $slider['title'],
                     'subtitle' => $slider['subtitle'],
-                    'products' => $products
+                    'products' => $products,
                 ];
             }
         }
 
-        // Fetch active banners sorted by sort order
-        $this->banners = Banner::where('is_active', true)
-            ->select(['id', 'image_path', 'url'])
-            ->orderBy('sort_order', 'asc')
-            ->get()
-            ->toArray();
+        $this->banners = Cache::remember('home_banners', 3600, function () {
+            return Banner::where('is_active', true)
+                ->select(['id', 'image_path', 'url'])
+                ->orderBy('sort_order', 'asc')
+                ->get()
+                ->toArray();
+        });
     }
 
     public function addToCart(int $productId)
@@ -109,6 +102,7 @@ new class extends Component
 ?>
 
 <div class="space-y-16">
+    <h1 class="sr-only">{{ \App\Services\SeoService::STORE_NAME }} - Premium Online Shopping Hub</h1>
     <!-- Full-Width Responsive Hero Banner Auto-Slider -->
     <section class="w-full">
         @if(count($banners) > 0)
@@ -135,11 +129,11 @@ new class extends Component
                             <!-- Link target wrap -->
                             <template x-if="slide.url">
                                 <a :href="slide.url" class="block w-full h-full">
-                                    <img :src="slide.image_path" loading="eager" decoding="async" class="w-full h-full object-fill sm:object-cover select-none cursor-pointer" alt="Promo banner">
+                                    <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-fill sm:object-cover select-none cursor-pointer" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
                                 </a>
                             </template>
                             <template x-if="!slide.url">
-                                <img :src="slide.image_path" loading="eager" decoding="async" class="w-full h-full object-fill sm:object-cover select-none" alt="Promo banner">
+                                <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-fill sm:object-cover select-none" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
                             </template>
                         </div>
                     </template>

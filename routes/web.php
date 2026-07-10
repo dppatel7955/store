@@ -1,6 +1,9 @@
 <?php
 
+use App\Http\Controllers\SitemapController;
 use Illuminate\Support\Facades\Route;
+
+Route::get('/sitemap.xml', SitemapController::class)->name('sitemap');
 
 Route::get('/', function () {
     return view('pages.home');
@@ -15,7 +18,7 @@ Route::get('/shop/{slug}', function ($slug) {
 })->name('shop.detail');
 
 Route::get('/categories/{slug}', function ($slug) {
-    $category = \App\Models\Category::with('children')->where('slug', $slug)->firstOrFail();
+    $category = \App\Models\Category::with(['children', 'parent'])->where('slug', $slug)->firstOrFail();
     if ($category->children->where('is_active', true)->isNotEmpty()) {
         return view('pages.category-detail', compact('category'));
     }

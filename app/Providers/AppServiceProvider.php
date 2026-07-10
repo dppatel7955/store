@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Models\Category;
+use Illuminate\Support\Facades\Cache;
+use Illuminate\Support\Facades\View;
 use Illuminate\Support\ServiceProvider;
 
 class AppServiceProvider extends ServiceProvider
@@ -16,6 +19,19 @@ class AppServiceProvider extends ServiceProvider
 
     public function boot(): void
     {
+        View::composer('components.layouts.app', function ($view) {
+            $footerCategories = Cache::remember('footer_categories', 3600, function () {
+                return Category::query()
+                    ->where('is_active', true)
+                    ->select(['id', 'name', 'slug'])
+                    ->inRandomOrder()
+                    ->limit(5)
+                    ->get();
+            });
+
+            $view->with('footerCategories', $footerCategories);
+        });
+
         if (file_exists(storage_path('app/mail_setup.json'))) {
             $settings = json_decode(file_get_contents(storage_path('app/mail_setup.json')), true);
             if ($settings) {
