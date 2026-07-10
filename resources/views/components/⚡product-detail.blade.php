@@ -147,42 +147,117 @@ new class extends Component
         activeIndex: 0,
         timer: null,
         selectedVariantId: @entangle('selectedVariantId'),
-        variants: {{ json_encode($product->variants) }},
+        variants: {{ json_encode($product->variants->values()) }},
         selectedVariantPrice: null,
         selectedVariantSalePrice: null,
         selectedVariantStock: {{ $product->stock }},
         selectedVariantSku: '{{ $product->sku }}',
         lightboxOpen: false,
+        _galleryReady: false,
+
+        normalizeUrl(url) {
+            if (!url) {
+                return '';
+            }
+
+            return String(url)
+                .replace(/^https?:\/\/[^/]+/i, '')
+                .replace(/\\/g, '/')
+                .replace(/\/+/g, '/')
+                .replace(/^\/?/, '/');
+        },
         
         init() {
             this.buildMediaList();
             this.startTimer();
-            if (this.selectedVariantId) {
-                setTimeout(() => {
-                    this.selectVariant(this.selectedVariantId);
-                }, 50);
+            this.$nextTick(() => {
+                if (this.selectedVariantId) {
+                    this.applyVariantSelection(this.selectedVariantId, { syncLivewire: false });
+                }
+            });
+        },
+        goToSlide(index) {
+            if (index < 0 || index >= this.mediaItems.length) {
+                return;
             }
-            this.$watch('selectedVariantId', value => {
-                if (value) {
-                    this.selectVariant(value);
-                }
-            });
-            this.$watch('activeIndex', value => {
+
+            this.activeIndex = index;
+
+            this.$nextTick(() => {
                 const container = document.getElementById('main-gallery-slider');
-                const slide = document.getElementById('main-slide-' + value);
-                if (container && slide) {
-                    const targetScroll = slide.offsetLeft;
-                    if (Math.abs(container.scrollLeft - targetScroll) > 5) {
-                        container.scrollTo({ left: targetScroll, behavior: 'smooth' });
-                    }
+                if (!container) {
+                    return;
                 }
+
+                const slide = document.getElementById('main-slide-' + index);
+                const targetScroll = slide ? slide.offsetLeft : container.clientWidth * index;
+
+                container.scrollTo({
+                    left: targetScroll,
+                    behavior: this._galleryReady ? 'smooth' : 'auto',
+                });
+
+                this._galleryReady = true;
             });
+        },
+        resolveVariantMediaIndex(variant) {
+            if (!variant) {
+                return -1;
+            }
+
+            const variantId = String(variant.id);
+            const mappedIndex = this.variantMappings[variantId] ?? this.variantMappings[variant.id];
+
+            if (mappedIndex !== undefined && mappedIndex >= 0) {
+                return mappedIndex;
+            }
+
+            if (Array.isArray(variant.images) && variant.images.length > 0) {
+                const firstNormalized = this.normalizeUrl(variant.images[0]);
+                const imageIndex = this.mediaItems.findIndex(item => item.normalizedUrl === firstNormalized);
+
+                if (imageIndex !== -1) {
+                    return imageIndex;
+                }
+            }
+
+            return this.mediaItems.findIndex(item => String(item.variantId) === variantId);
+        },
+        applyVariantSelection(variantId, options = { syncLivewire: true }) {
+            const normalizedId = Number(variantId);
+            const variant = this.variants.find(v => Number(v.id) === normalizedId);
+
+            if (!variant) {
+                this.selectedVariantPrice = null;
+                this.selectedVariantSalePrice = null;
+                this.selectedVariantStock = {{ $product->stock }};
+                this.selectedVariantSku = '{{ $product->sku }}';
+                this.goToSlide(0);
+                this.startTimer();
+                return;
+            }
+
+            if (options.syncLivewire && Number(this.selectedVariantId) !== normalizedId) {
+                this.selectedVariantId = normalizedId;
+            }
+
+            this.selectedVariantPrice = variant.price;
+            this.selectedVariantSalePrice = variant.sale_price;
+            this.selectedVariantStock = variant.stock;
+            this.selectedVariantSku = variant.sku || '{{ $product->sku }}';
+
+            const targetIdx = this.resolveVariantMediaIndex(variant);
+            if (targetIdx >= 0) {
+                this.goToSlide(targetIdx);
+            }
+
+            this.startTimer();
         },
         buildMediaList() {
             let list = [];
             if (Array.isArray(this.productImages)) {
                 this.productImages.forEach(img => {
-                    list.push({ type: 'image', url: img });
+                    list.push({ type: 'image', url: img, normalizedUrl: this.normalizeUrl(img) });
                 });
             }
             if (this.videoPath) {
@@ -193,17 +268,19 @@ new class extends Component
                 this.variants.forEach(variant => {
                     if (variant.images && variant.images.length > 0) {
                         let firstImg = variant.images[0];
-                        let existingIdx = list.findIndex(item => item.url === firstImg);
+                        let firstNormalized = this.normalizeUrl(firstImg);
+                        let existingIdx = list.findIndex(item => item.normalizedUrl === firstNormalized);
                         if (existingIdx !== -1) {
-                            this.variantMappings[variant.id] = existingIdx;
+                            this.variantMappings[String(variant.id)] = existingIdx;
                         } else {
                             let newIdx = list.length;
-                            list.push({ type: 'image', url: firstImg, variantId: variant.id });
-                            this.variantMappings[variant.id] = newIdx;
+                            list.push({ type: 'image', url: firstImg, normalizedUrl: firstNormalized, variantId: variant.id });
+                            this.variantMappings[String(variant.id)] = newIdx;
                             for (let i = 1; i < variant.images.length; i++) {
                                 let img = variant.images[i];
-                                if (!list.some(item => item.url === img)) {
-                                    list.push({ type: 'image', url: img, variantId: variant.id });
+                                let normalized = this.normalizeUrl(img);
+                                if (!list.some(item => item.normalizedUrl === normalized)) {
+                                    list.push({ type: 'image', url: img, normalizedUrl: normalized, variantId: variant.id });
                                 }
                             }
                         }
@@ -230,35 +307,15 @@ new class extends Component
         },
         goToNext() {
             if (this.mediaItems.length <= 1) return;
-            this.activeIndex = (this.activeIndex + 1) % this.mediaItems.length;
+            this.goToSlide((this.activeIndex + 1) % this.mediaItems.length);
             this.startTimer();
         },
         selectItem(index) {
-            this.activeIndex = index;
+            this.goToSlide(index);
             this.startTimer();
         },
         selectVariant(variantId) {
-            this.selectedVariantId = variantId;
-            let variant = this.variants.find(v => v.id == variantId);
-            if (variant) {
-                this.selectedVariantPrice = variant.price;
-                this.selectedVariantSalePrice = variant.sale_price;
-                this.selectedVariantStock = variant.stock;
-                this.selectedVariantSku = variant.sku || '{{ $product->sku }}';
-                
-                let targetIdx = this.variantMappings[variant.id];
-                if (targetIdx !== undefined && targetIdx !== -1) {
-                    this.activeIndex = targetIdx;
-                }
-                this.startTimer();
-            } else {
-                this.selectedVariantPrice = null;
-                this.selectedVariantSalePrice = null;
-                this.selectedVariantStock = {{ $product->stock }};
-                this.selectedVariantSku = '{{ $product->sku }}';
-                this.activeIndex = 0;
-                this.startTimer();
-            }
+            this.applyVariantSelection(variantId, { syncLivewire: true });
         }
     }">
         <!-- Gallery -->
@@ -306,7 +363,7 @@ new class extends Component
 
                 <!-- Left/Right Arrow Navigation Overlays (visible on hover) -->
                 <button type="button" 
-                        @click.stop="activeIndex = (activeIndex - 1 + mediaItems.length) % mediaItems.length" 
+                        @click.stop="goToSlide((activeIndex - 1 + mediaItems.length) % mediaItems.length)" 
                         class="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 z-10"
                         x-show="mediaItems.length > 1"
                 >
@@ -315,7 +372,7 @@ new class extends Component
                     </svg>
                 </button>
                 <button type="button" 
-                        @click.stop="activeIndex = (activeIndex + 1) % mediaItems.length" 
+                        @click.stop="goToSlide((activeIndex + 1) % mediaItems.length)" 
                         class="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 z-10"
                         x-show="mediaItems.length > 1"
                 >
@@ -475,7 +532,7 @@ new class extends Component
                                     <button
                                         type="button"
                                         @click="selectVariant({{ $var->id }})"
-                                        :class="selectedVariantId === {{ $var->id }} ? 'ring-2 ring-indigo-500 ring-offset-2 border-indigo-500' : 'border-slate-300 hover:border-slate-400'"
+                                        :class="Number(selectedVariantId) === {{ $var->id }} ? 'ring-2 ring-indigo-500 ring-offset-2 border-indigo-500' : 'border-slate-300 hover:border-slate-400'"
                                         class="group relative flex h-10 w-10 items-center justify-center rounded-full border-2 bg-white p-0.5 shadow-sm transition duration-150"
                                         title="{{ $var->name }}"
                                         aria-label="{{ $var->name }}"
@@ -486,7 +543,7 @@ new class extends Component
                                     <button
                                         type="button"
                                         @click="selectVariant({{ $var->id }})"
-                                        :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                        :class="Number(selectedVariantId) === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
                                         class="inline-flex min-h-10 min-w-10 items-center justify-center rounded-xl border px-3 py-2 text-sm font-bold uppercase tracking-wide shadow-sm transition duration-150"
                                     >
                                         {{ $var->displayValue() }}
@@ -495,7 +552,7 @@ new class extends Component
                                     <button
                                         type="button"
                                         @click="selectVariant({{ $var->id }})"
-                                        :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                        :class="Number(selectedVariantId) === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
                                         class="inline-flex items-center gap-1.5 rounded-xl border px-4 py-2.5 text-xs font-semibold shadow-sm transition duration-150"
                                     >
                                         <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" aria-hidden="true">
@@ -507,7 +564,7 @@ new class extends Component
                                     <button
                                         type="button"
                                         @click="selectVariant({{ $var->id }})"
-                                        :class="selectedVariantId === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
+                                        :class="Number(selectedVariantId) === {{ $var->id }} ? 'border-indigo-650 bg-indigo-50 text-indigo-700 ring-2 ring-indigo-500/20' : 'border-slate-200 bg-white text-slate-800 hover:border-slate-350'"
                                         class="px-4 py-2.5 text-xs font-semibold border rounded-xl shadow-sm transition duration-150"
                                     >
                                         {{ $var->name }}
@@ -518,7 +575,7 @@ new class extends Component
                         @if($variantType === 'color')
                             <p class="text-xs text-slate-500">
                                 Selected:
-                                <span class="font-semibold text-slate-700" x-text="(variants.find(v => v.id == selectedVariantId) || {}).name || ''"></span>
+                                <span class="font-semibold text-slate-700" x-text="(variants.find(v => Number(v.id) === Number(selectedVariantId)) || {}).name || ''"></span>
                             </p>
                         @endif
                     </div>
