@@ -94,7 +94,7 @@ new class extends Component
                      </svg>
                      Your Cart
                  </h2>
-                 <button @click="open = false" class="text-slate-500 hover:text-slate-805 focus:outline-none">
+                 <button @click="open = false" class="p-2 -mr-1 rounded-xl text-slate-500 hover:text-slate-800 hover:bg-slate-50 focus:outline-none" aria-label="Close cart">
                      <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                          <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" />
                      </svg>
@@ -130,21 +130,21 @@ new class extends Component
                                       <!-- Quantity & Remove -->
                                       <div class="flex items-center justify-between mt-3">
                                           <!-- Quantity selector -->
-                                          <div class="flex items-center gap-1 bg-white border border-slate-200 rounded-lg p-0.5 shadow-sm">
-                                              <button wire:click="decreaseQuantity('{{ $key }}')" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
-                                                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                          <div class="flex items-center gap-0.5 bg-white border border-slate-200 rounded-xl p-0.5 shadow-sm">
+                                              <button wire:click="decreaseQuantity('{{ $key }}')" class="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 transition" aria-label="Decrease quantity">
+                                                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M20 12H4" />
                                                   </svg>
                                               </button>
-                                              <span class="text-xs font-bold text-slate-800 px-1 min-w-[16px] text-center">{{ $item['quantity'] }}</span>
-                                              <button wire:click="increaseQuantity('{{ $key }}')" class="p-1 rounded hover:bg-slate-50 text-slate-500 transition">
-                                                  <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                              <span class="text-xs font-bold text-slate-800 px-2 min-w-[1.5rem] text-center">{{ $item['quantity'] }}</span>
+                                              <button wire:click="increaseQuantity('{{ $key }}')" class="h-9 w-9 inline-flex items-center justify-center rounded-lg hover:bg-slate-50 text-slate-600 transition" aria-label="Increase quantity">
+                                                  <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                                       <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M12 4v16m8-8H4" />
                                                   </svg>
                                               </button>
                                           </div>
                                           
-                                          <button wire:click="removeItem('{{ $key }}')" class="text-[10px] font-bold text-rose-600 hover:text-rose-700 transition">
+                                          <button wire:click="removeItem('{{ $key }}')" class="min-h-9 px-2 rounded-lg text-xs font-bold text-rose-600 hover:bg-rose-50 transition">
                                               Remove
                                           </button>
                                       </div>
@@ -165,7 +165,7 @@ new class extends Component
 
              <!-- Footer -->
              @if(count($cart) > 0)
-                 <div class="border-t border-slate-200 bg-slate-50/60 p-4 sm:p-6 space-y-4">
+                 <div class="border-t border-slate-200 bg-slate-50/60 p-4 sm:p-6 pb-[max(1rem,env(safe-area-inset-bottom))] space-y-4">
                      <div class="flex justify-between text-base font-semibold text-slate-800">
                          <span>Subtotal</span>
                          <span>₹{{ number_format($subtotal) }}</span>

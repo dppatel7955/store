@@ -547,9 +547,9 @@ new class extends Component
 
     <h1 class="text-3xl font-extrabold text-slate-900 mb-8">Checkout</h1>
     
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-12">
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6 lg:gap-12">
         <!-- Details Form -->
-        <div class="lg:col-span-2 space-y-6">
+        <div class="lg:col-span-2 space-y-6 order-2 lg:order-1">
             <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 space-y-6 shadow-sm">
                 <h2 class="text-xl font-bold text-slate-900 border-b border-slate-200 pb-3">Shipping Address</h2>
                 
@@ -668,7 +668,7 @@ new class extends Component
         </div>
 
         <!-- Order Summary -->
-        <div class="lg:col-span-1">
+        <div class="lg:col-span-1 order-1 lg:order-2">
             <div class="bg-white border border-slate-200 rounded-2xl p-6 sticky top-24 space-y-6 shadow-sm">
                 <h2 class="text-lg font-bold text-slate-900 border-b border-slate-200 pb-3">Order Summary</h2>
                 

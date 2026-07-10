@@ -11,7 +11,7 @@ use Livewire\Attributes\Computed;
 new class extends Component
 {
     use WithPagination;
-    // Filters
+
     public string $search = '';
     public array $selectedCategories = [];
     public array $selectedBrands = [];
@@ -21,8 +21,6 @@ new class extends Component
 
     public $categoriesList = [];
     public $brandsList = [];
-    
-
 
     protected $queryString = [
         'search' => ['except' => ''],
@@ -36,7 +34,7 @@ new class extends Component
         $this->categoriesList = Category::with('children')->whereNull('parent_id')->where('is_active', true)->get();
         $this->brandsList = Brand::where('is_active', true)->get();
 
-        if (request()->has('search') && !empty(request('search'))) {
+        if (request()->has('search') && ! empty(request('search'))) {
             $this->search = request('search');
         }
         if (request()->has('category')) {
@@ -63,25 +61,24 @@ new class extends Component
     {
         $query = Product::with('brand')->where('is_active', true);
 
-        if (!empty($this->search)) {
+        if (! empty($this->search)) {
             $query->where(function ($q) {
                 $q->where('name', 'like', '%' . $this->search . '%')
-                  ->orWhere('description', 'like', '%' . $this->search . '%')
-                  ->orWhere('short_description', 'like', '%' . $this->search . '%')
-                  ->orWhereHas('category', function ($catQuery) {
-                      $catQuery->where('name', 'like', '%' . $this->search . '%');
-                  });
+                    ->orWhere('description', 'like', '%' . $this->search . '%')
+                    ->orWhere('short_description', 'like', '%' . $this->search . '%')
+                    ->orWhereHas('category', function ($catQuery) {
+                        $catQuery->where('name', 'like', '%' . $this->search . '%');
+                    });
             });
         }
 
-        if (!empty($this->selectedCategories)) {
-            // Find all child categories of selected categories
+        if (! empty($this->selectedCategories)) {
             $childCategoryIds = Category::whereIn('parent_id', $this->selectedCategories)->pluck('id')->toArray();
             $allCategoryIds = array_unique(array_merge($this->selectedCategories, $childCategoryIds));
             $query->whereIn('category_id', $allCategoryIds);
         }
 
-        if (!empty($this->selectedBrands)) {
+        if (! empty($this->selectedBrands)) {
             $query->whereIn('brand_id', $this->selectedBrands);
         }
 
@@ -100,11 +97,58 @@ new class extends Component
         return $query->paginate(12);
     }
 
+    #[Computed]
+    public function activeFilterCount(): int
+    {
+        $count = count($this->selectedCategories) + count($this->selectedBrands);
+
+        if ($this->minPrice > 0 || $this->maxPrice < 250000) {
+            $count++;
+        }
+
+        if ($this->search !== '') {
+            $count++;
+        }
+
+        return $count;
+    }
+
     public function addToCart(int $productId)
     {
         CartService::add($productId, 1);
         $this->dispatch('cart-updated');
         $this->dispatch('toggle-cart-drawer');
+    }
+
+    public function removeCategory(int $id)
+    {
+        $this->selectedCategories = array_values(array_filter(
+            $this->selectedCategories,
+            fn ($categoryId) => (int) $categoryId !== $id
+        ));
+        $this->resetPage();
+    }
+
+    public function removeBrand(int $id)
+    {
+        $this->selectedBrands = array_values(array_filter(
+            $this->selectedBrands,
+            fn ($brandId) => (int) $brandId !== $id
+        ));
+        $this->resetPage();
+    }
+
+    public function clearSearch()
+    {
+        $this->search = '';
+        $this->resetPage();
+    }
+
+    public function resetPrice()
+    {
+        $this->minPrice = 0;
+        $this->maxPrice = 250000;
+        $this->resetPage();
     }
 
     public function resetFilters()
@@ -120,188 +164,225 @@ new class extends Component
 };
 ?>
 
-<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
-    <!-- Page Header & Search -->
-    <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4 mb-8">
-        <div>
-            <h1 class="text-3xl font-extrabold text-slate-900">Catalog Shop</h1>
-            <p class="text-sm text-slate-500 mt-1">Discover, filter, and shop premium products at great prices.</p>
-        </div>
-        <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-4 w-full md:w-auto">
-            <div class="relative w-full sm:w-72">
-                <input 
-                    type="text" 
-                    wire:model.live.debounce.300ms="search" 
-                    placeholder="Search products..." 
-                    class="w-full bg-white border border-slate-200 rounded-xl py-2 pl-10 pr-4 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition shadow-sm"
-                />
-                <span class="absolute left-3.5 top-3 text-slate-450">
-                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                    </svg>
-                </span>
+@php
+    $allCategories = collect($categoriesList)->flatMap(function ($cat) {
+        return collect([$cat])->merge($cat->children ?? []);
+    })->keyBy('id');
+    $brandsById = collect($brandsList)->keyBy('id');
+@endphp
+
+<div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 sm:py-12" x-data="{ filterOpen: false }" x-effect="document.body.classList.toggle('overflow-hidden', filterOpen)">
+    <!-- Page Header -->
+    <div class="flex flex-col gap-4 mb-6 sm:mb-8">
+        <div class="flex flex-col sm:flex-row sm:items-end sm:justify-between gap-3">
+            <div>
+                <h1 class="text-2xl sm:text-3xl font-extrabold text-slate-900 tracking-tight">Shop</h1>
+                <p class="text-sm text-slate-500 mt-1">
+                    {{ $this->products->total() }} {{ Str::plural('product', $this->products->total()) }}
+                    @if($this->activeFilterCount > 0)
+                        <span class="text-indigo-600 font-semibold">· {{ $this->activeFilterCount }} filters</span>
+                    @endif
+                </p>
             </div>
-            
-            <select 
-                wire:model.live="sortBy"
-                class="w-full sm:w-auto bg-white border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-600 transition shadow-sm"
-            >
-                <option value="default">Sort: Default</option>
-                <option value="price_asc">Price: Low to High</option>
-                <option value="price_desc">Price: High to Low</option>
-                <option value="newest">Sort: Newest</option>
-            </select>
+
+            <div class="flex items-center gap-2 sm:gap-3">
+                <!-- Mobile filter button -->
+                <button
+                    type="button"
+                    @click="filterOpen = true"
+                    class="lg:hidden inline-flex items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-3.5 py-2.5 text-sm font-semibold text-slate-800 shadow-sm hover:bg-slate-50 transition min-h-11"
+                >
+                    <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 4a1 1 0 011-1h16a1 1 0 011 1v2.586a1 1 0 01-.293.707l-6.414 6.414a1 1 0 00-.293.707V17l-4 4v-6.586a1 1 0 00-.293-.707L3.293 7.293A1 1 0 013 6.586V4z" />
+                    </svg>
+                    Filters
+                    @if($this->activeFilterCount > 0)
+                        <span class="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-indigo-600 px-1.5 text-[10px] font-bold text-white">{{ $this->activeFilterCount }}</span>
+                    @endif
+                </button>
+
+                <select
+                    wire:model.live="sortBy"
+                    class="flex-1 sm:flex-none min-h-11 bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-600 transition shadow-sm"
+                >
+                    <option value="default">Featured</option>
+                    <option value="price_asc">Price: Low to High</option>
+                    <option value="price_desc">Price: High to Low</option>
+                    <option value="newest">Newest</option>
+                </select>
+            </div>
         </div>
+
+        <!-- Search -->
+        <div class="relative w-full max-w-xl">
+            <input
+                type="search"
+                wire:model.live.debounce.300ms="search"
+                placeholder="Search products, brands, categories..."
+                class="w-full min-h-11 bg-white border border-slate-200 rounded-xl py-2.5 pl-10 pr-10 text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition shadow-sm"
+            />
+            <span class="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">
+                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+                </svg>
+            </span>
+            @if($search !== '')
+                <button type="button" wire:click="clearSearch" class="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-700 p-1" aria-label="Clear search">
+                    <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                </button>
+            @endif
+        </div>
+
+        <!-- Active filter chips -->
+        @if($this->activeFilterCount > 0)
+            <div class="flex flex-wrap items-center gap-2">
+                @if($search !== '')
+                    <button type="button" wire:click="clearSearch" class="inline-flex items-center gap-1.5 rounded-full bg-indigo-50 border border-indigo-100 px-3 py-1.5 text-xs font-semibold text-indigo-700 hover:bg-indigo-100 transition">
+                        “{{ Str::limit($search, 24) }}”
+                        <span class="text-indigo-400">&times;</span>
+                    </button>
+                @endif
+
+                @foreach($selectedCategories as $catId)
+                    @php $catId = (int) $catId; @endphp
+                    @if($allCategories->has($catId))
+                        <button type="button" wire:click="removeCategory({{ $catId }})" class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
+                            {{ $allCategories[$catId]->name }}
+                            <span class="text-slate-400">&times;</span>
+                        </button>
+                    @endif
+                @endforeach
+
+                @foreach($selectedBrands as $brandId)
+                    @php $brandId = (int) $brandId; @endphp
+                    @if($brandsById->has($brandId))
+                        <button type="button" wire:click="removeBrand({{ $brandId }})" class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
+                            {{ $brandsById[$brandId]->name }}
+                            <span class="text-slate-400">&times;</span>
+                        </button>
+                    @endif
+                @endforeach
+
+                @if($minPrice > 0 || $maxPrice < 250000)
+                    <button type="button" wire:click="resetPrice" class="inline-flex items-center gap-1.5 rounded-full bg-slate-100 border border-slate-200 px-3 py-1.5 text-xs font-semibold text-slate-700 hover:bg-slate-200 transition">
+                        ₹{{ number_format($minPrice) }} – ₹{{ number_format($maxPrice) }}
+                        <span class="text-slate-400">&times;</span>
+                    </button>
+                @endif
+
+                <button type="button" wire:click="resetFilters" class="text-xs font-bold text-indigo-600 hover:text-indigo-500 px-1">
+                    Clear all
+                </button>
+            </div>
+        @endif
     </div>
 
-    <!-- Main Content Layout -->
-    <div class="grid grid-cols-1 lg:grid-cols-4 gap-8">
-        <!-- Sidebar Filters -->
-        <aside class="space-y-4 lg:col-span-1" x-data="{ mobileOpen: false }">
-            <!-- Mobile Filters Toggle -->
-            <button 
-                type="button"
-                @click="mobileOpen = !mobileOpen" 
-                class="lg:hidden w-full flex items-center justify-between bg-white border border-slate-200 rounded-xl px-4 py-2.5 text-sm font-semibold text-slate-700 shadow-sm hover:bg-slate-50 transition"
-            >
-                <span class="flex items-center gap-2">
-                    <svg class="h-4 w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6V4m0 2a2 2 0 100 4m0-4a2 2 0 110 4m-6 8a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4m6 6v10m6-2a2 2 0 100-4m0 4a2 2 0 110-4m0 4v2m0-6V4" />
-                    </svg>
-                    Filters & Categories
-                </span>
-                <svg class="h-5 w-5 text-slate-400 transition-transform duration-200" :class="{ 'rotate-180': mobileOpen }" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
-                </svg>
-            </button>
-
-            <!-- Filters Card (collapsible on mobile, static on desktop) -->
-            <div 
-                :class="mobileOpen ? 'block' : 'hidden lg:block'" 
-                class="bg-white border border-slate-200 rounded-2xl p-6 space-y-6 sticky top-24 shadow-sm"
-            >
-                <div class="flex items-center justify-between border-b border-slate-100 pb-4">
-                    <h3 class="font-bold text-slate-850">Filters</h3>
-                    <button wire:click="resetFilters" class="text-xs text-indigo-650 hover:text-indigo-500 font-semibold transition">
-                        Reset All
-                    </button>
-                </div>
-
-                <!-- Categories -->
-                <div>
-                    <h4 class="text-sm font-bold text-slate-800 mb-3">Categories</h4>
-                    <div class="space-y-3">
-                        @foreach($categoriesList as $cat)
-                            <div class="space-y-2">
-                                <label class="flex items-center gap-3 text-sm text-slate-800 font-bold hover:text-indigo-600 cursor-pointer select-none">
-                                    <input 
-                                        type="checkbox" 
-                                        value="{{ $cat->id }}" 
-                                        wire:model.live="selectedCategories"
-                                        class="rounded border-slate-300 bg-slate-50 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white"
-                                      />
-                                    <span>{{ $cat->name }}</span>
-                                </label>
-                                @if($cat->children->isNotEmpty())
-                                    <div class="pl-5 space-y-2 border-l border-slate-100 ml-2">
-                                        @foreach($cat->children as $child)
-                                            <label class="flex items-center gap-2.5 text-xs text-slate-600 hover:text-indigo-600 cursor-pointer select-none">
-                                                <input 
-                                                    type="checkbox" 
-                                                    value="{{ $child->id }}" 
-                                                    wire:model.live="selectedCategories"
-                                                    class="rounded border-slate-300 bg-slate-50 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white h-3.5 w-3.5"
-                                                  />
-                                                <span class="text-slate-400 font-mono">└</span>
-                                                <span>{{ $child->name }}</span>
-                                            </label>
-                                        @endforeach
-                                    </div>
-                                @endif
-                            </div>
-                        @endforeach
-                    </div>
-                </div>
-
-                <!-- Brands -->
-                <div>
-                    <h4 class="text-sm font-bold text-slate-800 mb-3">Brands</h4>
-                    <div class="space-y-2.5">
-                        @foreach($brandsList as $brand)
-                            <label class="flex items-center gap-3 text-sm text-slate-650 hover:text-slate-900 cursor-pointer select-none">
-                                <input 
-                                    type="checkbox" 
-                                    value="{{ $brand->id }}" 
-                                    wire:model.live="selectedBrands"
-                                    class="rounded border-slate-300 bg-slate-50 text-indigo-600 focus:ring-indigo-500 focus:ring-offset-white"
-                                  />
-                                <span>{{ $brand->name }}</span>
-                            </label>
-                        @endforeach
-                    </div>
-                </div>
-
-                <!-- Price Range -->
-                <div>
-                    <h4 class="text-sm font-bold text-slate-800 mb-3">Price Range (INR)</h4>
-                    <div class="flex items-center gap-3">
-                        <input 
-                            type="number" 
-                            wire:model.live.debounce.500ms="minPrice" 
-                            placeholder="Min" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 px-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-600"
-                        />
-                        <span class="text-slate-400">-</span>
-                        <input 
-                            type="number" 
-                            wire:model.live.debounce.500ms="maxPrice" 
-                            placeholder="Max" 
-                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-1.5 px-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-600"
-                        />
-                    </div>
-                </div>
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-6 lg:gap-8">
+        <!-- Desktop sidebar -->
+        <aside class="hidden lg:block lg:col-span-1">
+            <div class="bg-white border border-slate-200 rounded-2xl p-5 space-y-6 sticky top-24 shadow-sm">
+                @include('components.partials.shop-filters', ['compact' => false])
             </div>
         </aside>
 
-        <!-- Products List Grid -->
-        <div class="lg:col-span-3 space-y-8">
+        <!-- Mobile filter drawer -->
+        <div
+            x-show="filterOpen"
+            class="fixed inset-0 z-50 lg:hidden"
+            style="display: none;"
+            role="dialog"
+            aria-modal="true"
+            aria-label="Filters"
+        >
+            <div
+                x-show="filterOpen"
+                x-transition:enter="transition-opacity ease-out duration-200"
+                x-transition:enter-start="opacity-0"
+                x-transition:enter-end="opacity-100"
+                x-transition:leave="transition-opacity ease-in duration-150"
+                x-transition:leave-start="opacity-100"
+                x-transition:leave-end="opacity-0"
+                @click="filterOpen = false"
+                class="absolute inset-0 bg-slate-950/50 backdrop-blur-sm"
+            ></div>
+
+            <div
+                x-show="filterOpen"
+                x-transition:enter="transition ease-out duration-300 transform"
+                x-transition:enter-start="translate-y-full"
+                x-transition:enter-end="translate-y-0"
+                x-transition:leave="transition ease-in duration-200 transform"
+                x-transition:leave-start="translate-y-0"
+                x-transition:leave-end="translate-y-full"
+                class="absolute inset-x-0 bottom-0 max-h-[88vh] bg-white rounded-t-3xl shadow-2xl flex flex-col"
+            >
+                <div class="flex items-center justify-between px-5 pt-4 pb-3 border-b border-slate-100">
+                    <div class="flex items-center gap-2">
+                        <span class="mx-auto h-1 w-10 rounded-full bg-slate-200 absolute left-1/2 -translate-x-1/2 top-2"></span>
+                        <h2 class="text-base font-bold text-slate-900">Filters</h2>
+                        @if($this->activeFilterCount > 0)
+                            <span class="rounded-full bg-indigo-50 text-indigo-700 text-[10px] font-bold px-2 py-0.5">{{ $this->activeFilterCount }}</span>
+                        @endif
+                    </div>
+                    <button type="button" @click="filterOpen = false" class="p-2 rounded-xl text-slate-500 hover:bg-slate-50" aria-label="Close filters">
+                        <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12" /></svg>
+                    </button>
+                </div>
+
+                <div class="flex-1 overflow-y-auto px-5 py-4 space-y-6 overscroll-contain">
+                    @include('components.partials.shop-filters', ['compact' => true])
+                </div>
+
+                <div class="border-t border-slate-100 p-4 pb-[max(1rem,env(safe-area-inset-bottom))] grid grid-cols-2 gap-3 bg-white">
+                    <button type="button" wire:click="resetFilters" class="min-h-11 rounded-xl border border-slate-200 bg-white text-sm font-bold text-slate-700 hover:bg-slate-50 transition">
+                        Reset
+                    </button>
+                    <button type="button" @click="filterOpen = false" class="min-h-11 rounded-xl bg-indigo-600 text-sm font-bold text-white hover:bg-indigo-500 transition shadow-sm">
+                        Show {{ $this->products->total() }} results
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Products grid -->
+        <div class="lg:col-span-3 space-y-6">
             @if($this->products->count() > 0)
-                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-6">
+                <div class="grid grid-cols-2 md:grid-cols-3 gap-3 sm:gap-5">
                     @foreach($this->products as $prod)
-                        <div class="group bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-md transition duration-300 flex flex-col h-full">
-                            <!-- Image -->
+                        @php
+                            $image = is_array($prod->images) && count($prod->images) ? $prod->images[0] : 'https://placehold.co/400x400?text=No+Image';
+                        @endphp
+                        <div wire:key="product-{{ $prod->id }}" class="group bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-md transition duration-300 flex flex-col h-full">
                             <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100 block">
-                                <img src="{{ $prod->images[0] }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
+                                <img src="{{ $image }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                 @if($prod->sale_price)
-                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                         {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                     </span>
                                 @endif
                             </a>
-                            <!-- Details -->
-                            <div class="p-3 sm:p-5 flex-1 flex flex-col justify-between">
+                            <div class="p-3 sm:p-4 flex-1 flex flex-col justify-between">
                                 <div>
-                                    <span class="text-[9px] sm:text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand->name }}</span>
-                                    <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 sm:mt-1 line-clamp-1 hover:text-indigo-600 transition">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-indigo-600">{{ $prod->brand?->name ?? 'Brand' }}</span>
+                                    <h3 class="text-xs sm:text-sm font-bold text-slate-800 mt-0.5 line-clamp-2 hover:text-indigo-600 transition leading-snug">
                                         <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}">{{ $prod->name }}</a>
                                     </h3>
-                                    <p class="text-[11px] sm:text-xs text-slate-500 mt-1 line-clamp-2">{{ strip_tags($prod->short_description) }}</p>
                                 </div>
-                                <div class="mt-3 sm:mt-4">
-                                    <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
+                                <div class="mt-3">
+                                    <div class="flex items-baseline flex-wrap gap-1.5 mb-3">
                                         @if($prod->sale_price)
-                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                            <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                            <span class="text-sm sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
+                                            <span class="text-[11px] text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
                                         @else
-                                            <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
+                                            <span class="text-sm sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
                                         @endif
                                     </div>
-                                    
-                                    <button 
+
+                                    <button
                                         wire:click="addToCart({{ $prod->id }})"
-                                        class="w-full rounded-lg sm:rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 sm:py-2.5 text-[10px] sm:text-xs font-bold text-white shadow transition duration-300 flex items-center justify-center gap-1 sm:gap-1.5"
+                                        class="w-full min-h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white shadow transition flex items-center justify-center gap-1.5"
                                     >
-                                        <svg class="h-3.5 w-3.5 sm:h-4 sm:w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
                                         </svg>
                                         Add to Cart
@@ -312,22 +393,21 @@ new class extends Component
                     @endforeach
                 </div>
 
-                <!-- Pagination Links -->
-                <div class="mt-8 pt-6 border-t border-slate-200">
+                <div class="pt-4 border-t border-slate-200 overflow-x-auto">
                     {{ $this->products->links() }}
                 </div>
             @else
-                <div class="bg-white border border-slate-200 rounded-2xl p-12 text-center shadow-sm">
-                    <svg class="h-12 w-12 text-slate-405 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <div class="bg-white border border-slate-200 rounded-2xl p-10 sm:p-12 text-center shadow-sm">
+                    <svg class="h-12 w-12 text-slate-300 mx-auto mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="1.5" d="M9.172 16.172a4 4 0 015.656 0M9 10h.01M15 10h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                     </svg>
                     <h3 class="text-lg font-bold text-slate-800">No products found</h3>
                     <p class="text-sm text-slate-500 mt-1">Try resetting your filters or search terms.</p>
-                    <button wire:click="resetFilters" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200 py-2 px-4 text-xs font-bold text-slate-700 hover:bg-slate-200 hover:text-slate-900 transition">
+                    <button wire:click="resetFilters" class="mt-4 inline-flex items-center gap-2 rounded-xl bg-slate-100 border border-slate-200 min-h-11 py-2.5 px-4 text-xs font-bold text-slate-700 hover:bg-slate-200 transition">
                         Clear All Filters
                     </button>
                 </div>
             @endif
         </div>
     </div>
-</div></div>
+</div>

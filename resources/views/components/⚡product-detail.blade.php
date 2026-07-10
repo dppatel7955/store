@@ -365,7 +365,7 @@ new class extends Component
                 <!-- Left/Right Arrow Navigation Overlays (visible on hover) -->
                 <button type="button" 
                         @click.stop="goToSlide((activeIndex - 1 + mediaItems.length) % mediaItems.length)" 
-                        class="absolute left-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 z-10"
+                        class="absolute left-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition duration-300 z-10"
                         x-show="mediaItems.length > 1"
                 >
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
@@ -374,7 +374,7 @@ new class extends Component
                 </button>
                 <button type="button" 
                         @click.stop="goToSlide((activeIndex + 1) % mediaItems.length)" 
-                        class="absolute right-3 top-1/2 -translate-y-1/2 h-9 w-9 rounded-full bg-white/80 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-0 group-hover:opacity-100 transition duration-300 z-10"
+                        class="absolute right-3 top-1/2 -translate-y-1/2 h-10 w-10 rounded-full bg-white/90 hover:bg-white text-slate-700 shadow flex items-center justify-center opacity-100 md:opacity-0 md:group-hover:opacity-100 transition duration-300 z-10"
                         x-show="mediaItems.length > 1"
                 >
                     <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">

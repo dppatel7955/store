@@ -129,11 +129,11 @@ new class extends Component
                             <!-- Link target wrap -->
                             <template x-if="slide.url">
                                 <a :href="slide.url" class="block w-full h-full">
-                                    <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-fill sm:object-cover select-none cursor-pointer" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
+                                    <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-cover select-none cursor-pointer" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
                                 </a>
                             </template>
                             <template x-if="!slide.url">
-                                <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-fill sm:object-cover select-none" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
+                                <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-cover select-none" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
                             </template>
                         </div>
                     </template>
