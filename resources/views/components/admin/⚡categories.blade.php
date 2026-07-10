@@ -4,6 +4,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use App\Models\Category;
+use App\Services\ImageUploadService;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 
@@ -126,7 +127,7 @@ new class extends Component
                     }
                 }
             }
-            $this->image = '/uploads/' . $this->imageFile->store('categories', 'custom_public');
+            $this->image = ImageUploadService::store($this->imageFile, 'categories');
         }
 
         if (empty($this->image)) {

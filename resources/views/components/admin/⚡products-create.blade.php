@@ -6,6 +6,7 @@ use App\Models\Product;
 use App\Models\ProductVariant;
 use App\Models\Category;
 use App\Models\Brand;
+use App\Services\ImageUploadService;
 use Illuminate\Support\Str;
 
 new class extends Component
@@ -147,8 +148,7 @@ new class extends Component
         // Upload main images
         if ($this->imageFiles) {
             foreach ($this->imageFiles as $file) {
-                $path = $file->store('products', 'custom_public');
-                $this->imagesList[] = '/uploads/' . $path;
+                $this->imagesList[] = ImageUploadService::store($file, 'products');
             }
         }
 
@@ -190,8 +190,7 @@ new class extends Component
             $variantImages = [];
             if (isset($this->tempImages[$index])) {
                 foreach ($this->tempImages[$index] as $file) {
-                    $path = $file->store('variants', 'custom_public');
-                    $variantImages[] = '/uploads/' . $path;
+                    $variantImages[] = ImageUploadService::store($file, 'variants');
                 }
             }
 

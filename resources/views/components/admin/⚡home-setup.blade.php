@@ -5,6 +5,7 @@ use Livewire\WithFileUploads;
 use App\Models\Banner;
 use App\Models\Product;
 use App\Services\HomeSettingsService;
+use App\Services\ImageUploadService;
 use Illuminate\Support\Facades\Cache;
 use Livewire\Attributes\Computed;
 
@@ -150,7 +151,7 @@ new class extends Component
             'newBannerSortOrder' => 'required|integer|min:0',
         ]);
 
-        $imagePath = '/uploads/' . $this->newBannerImage->store('banners', 'custom_public');
+        $imagePath = ImageUploadService::store($this->newBannerImage, 'banners', maxWidth: 1920, quality: 80);
 
         Banner::create([
             'image_path' => $imagePath,

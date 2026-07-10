@@ -25,9 +25,6 @@
     <!-- Vite Assets -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
     
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
-    
     @livewireStyles
 </head>
 <body class="h-full antialiased bg-slate-50 text-slate-900 flex flex-col justify-center min-h-screen">

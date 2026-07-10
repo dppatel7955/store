@@ -26,9 +26,6 @@
 
     <!-- Vite Assets -->
     @vite(['resources/css/app.css', 'resources/js/app.js'])
-    
-    <!-- SweetAlert2 -->
-    <script src="https://cdn.jsdelivr.net/npm/sweetalert2@11"></script>
 
     <!-- Trix Editor -->
     <link rel="stylesheet" type="text/css" href="https://unpkg.com/trix@2.0.8/dist/trix.css">
@@ -179,67 +176,37 @@
     </div>
 
     @livewireScripts
-    
-    <!-- SweetAlert2 Scripts -->
-    <script>
-        document.addEventListener('DOMContentLoaded', () => {
-            window.addEventListener('swal', event => {
-                const detail = event.detail;
-                
-                const title = detail.title || (Array.isArray(detail) ? detail[0]?.title : 'Notification');
-                const text = detail.text || (Array.isArray(detail) ? detail[0]?.text : '');
-                const icon = detail.icon || (Array.isArray(detail) ? detail[0]?.icon : 'success');
 
-                Swal.fire({
-                    title: title,
-                    toast: true,
-                    position: 'top-end',
-                    text: text,
-                    icon: icon,
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.onmouseenter = Swal.stopTimer;
-                        toast.onmouseleave = Swal.resumeTimer;
-                    }
-                });
+    @if (session()->has('success') || session()->has('error'))
+        <script>
+            document.addEventListener('DOMContentLoaded', () => {
+                @if (session()->has('success'))
+                    window.Swal?.fire({
+                        toast: true,
+                        position: 'top-end',
+                        title: 'Success!',
+                        text: @json(session('success')),
+                        icon: 'success',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                    });
+                @endif
+
+                @if (session()->has('error'))
+                    window.Swal?.fire({
+                        toast: true,
+                        position: 'top-end',
+                        title: 'Error!',
+                        text: @json(session('error')),
+                        icon: 'error',
+                        showConfirmButton: false,
+                        timer: 3000,
+                        timerProgressBar: true,
+                    });
+                @endif
             });
-
-            @if (session()->has('success'))
-                Swal.fire({
-                    title: 'Success!',
-                    text: "{{ session('success') }}",
-                    icon: 'success',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.onmouseenter = Swal.stopTimer;
-                        toast.onmouseleave = Swal.resumeTimer;
-                    }
-                });
-            @endif
-
-            @if (session()->has('error'))
-                Swal.fire({
-                    title: 'Error!',
-                    text: "{{ session('error') }}",
-                    icon: 'error',
-                    toast: true,
-                    position: 'top-end',
-                    showConfirmButton: false,
-                    timer: 3000,
-                    timerProgressBar: true,
-                    didOpen: (toast) => {
-                        toast.onmouseenter = Swal.stopTimer;
-                        toast.onmouseleave = Swal.resumeTimer;
-                    }
-                });
-            @endif
-        });
-    </script>
+        </script>
+    @endif
 </body>
 </html>

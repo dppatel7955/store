@@ -4,6 +4,7 @@ use Livewire\Component;
 use Livewire\WithPagination;
 use Livewire\WithFileUploads;
 use App\Models\Brand;
+use App\Services\ImageUploadService;
 use Illuminate\Support\Str;
 use Livewire\Attributes\Computed;
 
@@ -105,7 +106,7 @@ new class extends Component
                     }
                 }
             }
-            $this->logo = '/uploads/' . $this->logoFile->store('brands', 'custom_public');
+            $this->logo = ImageUploadService::store($this->logoFile, 'brands');
         }
 
         if (empty($this->logo)) {
