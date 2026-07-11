@@ -146,3 +146,7 @@ Route::get('/shipping-policy', function () {
     return view('pages.shipping-policy');
 })->name('shipping-policy');
 
+Route::get('/refund-policy', function () {
+    return view('pages.refund-policy');
+})->name('refund-policy');
+

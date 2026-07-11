@@ -17,6 +17,7 @@ class SitemapController extends Controller
             ['loc' => route('terms-of-service'), 'priority' => '0.3'],
             ['loc' => route('shipping-policy'), 'priority' => '0.4'],
             ['loc' => route('payment-methods'), 'priority' => '0.4'],
+            ['loc' => route('refund-policy'), 'priority' => '0.4'],
         ];
 
         $products = Product::query()

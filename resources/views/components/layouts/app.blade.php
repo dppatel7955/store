@@ -276,6 +276,12 @@
                             </svg>
                             Shipping Policy
                         </a>
+                        <a href="{{ route('refund-policy') }}" @click="mobileMenuOpen = false" class="flex items-center gap-3 px-3 py-2.5 rounded-xl text-xs font-bold text-slate-700 hover:bg-slate-50 hover:text-indigo-600 transition {{ request()->is('refund-policy') ? 'bg-indigo-50/60 text-indigo-650' : '' }}">
+                            <svg class="h-4 w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                                <path stroke-linecap="round" stroke-linejoin="round" d="M16 15v-1a4 4 0 00-4-4H8m0 0l3 3m-3-3l3-3m9 14V5a2 2 0 00-2-2H6a2 2 0 00-2 2v16l4-2 4 2 4-2 4 2z" />
+                            </svg>
+                            Refund Policy
+                        </a>
                     </div>
                 </div>
 
@@ -360,6 +366,7 @@
                     <ul class="space-y-2 text-sm text-slate-400">
                         <li><a href="{{ route('orders') }}" class="hover:text-indigo-400 transition">Track Order</a></li>
                         <li><a href="{{ route('shipping-policy') }}" class="hover:text-indigo-400 transition">Shipping Policy</a></li>
+                        <li><a href="{{ route('refund-policy') }}" class="hover:text-indigo-400 transition">Refund &amp; Cancellation</a></li>
                     </ul>
                 </div>
                 <div>
