@@ -117,25 +117,44 @@ new class extends Component
             }" class="relative w-full aspect-[16/9] sm:h-[400px] md:h-[500px] lg:h-[600px] overflow-hidden bg-slate-100 group shadow-inner">
                 <!-- Slides Wrapper -->
                 <div class="h-full w-full relative">
-                    <template x-for="(slide, index) in slides" :key="index">
-                        <div x-show="activeSlide === index" 
-                             x-transition:enter="transition ease-out duration-1000 transform"
-                             x-transition:enter-start="opacity-0 scale-102"
-                             x-transition:enter-end="opacity-100 scale-100"
-                             x-transition:leave="transition ease-in duration-800 transform"
-                             x-transition:leave-start="opacity-100 scale-100"
-                             x-transition:leave-end="opacity-0 scale-98"
-                             class="absolute inset-0 w-full h-full">
-                            <!-- Link target wrap -->
-                            <template x-if="slide.url">
-                                <a :href="slide.url" class="block w-full h-full">
-                                    <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-cover select-none cursor-pointer" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
+                    <!-- Server-Side Pre-rendered First Slide (LCP Optimization) -->
+                    @if(count($banners) > 0)
+                        @php $firstBanner = $banners[0]; @endphp
+                        <div x-show="activeSlide === 0" class="absolute inset-0 w-full h-full">
+                            @if(!empty($firstBanner['url']))
+                                <a href="{{ $firstBanner['url'] }}" class="block w-full h-full">
+                                    <img src="{{ $firstBanner['image_path'] }}" loading="eager" decoding="sync" fetchpriority="high" class="w-full h-full object-cover select-none cursor-pointer" alt="Promotional banner 1 at {{ \App\Services\SeoService::STORE_NAME }}">
                                 </a>
-                            </template>
-                            <template x-if="!slide.url">
-                                <img :src="slide.image_path" loading="eager" decoding="async" fetchpriority="high" class="w-full h-full object-cover select-none" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
-                            </template>
+                            @else
+                                <img src="{{ $firstBanner['image_path'] }}" loading="eager" decoding="sync" fetchpriority="high" class="w-full h-full object-cover select-none" alt="Promotional banner 1 at {{ \App\Services\SeoService::STORE_NAME }}">
+                            @endif
                         </div>
+                    @endif
+
+                    <!-- Remaining Slides rendered via Alpine (Index > 0) -->
+                    <template x-for="(slide, index) in slides" :key="index">
+                        <template x-if="index > 0">
+                            <div x-show="activeSlide === index" 
+                                 x-transition:enter="transition ease-out duration-1000 transform"
+                                 x-transition:enter-start="opacity-0 scale-102"
+                                 x-transition:enter-end="opacity-100 scale-100"
+                                 x-transition:leave="transition ease-in duration-800 transform"
+                                 x-transition:leave-start="opacity-100 scale-100"
+                                 x-transition:leave-end="opacity-0 scale-98"
+                                 class="absolute inset-0 w-full h-full"
+                                 style="display: none;"
+                            >
+                                <!-- Link target wrap -->
+                                <template x-if="slide.url">
+                                    <a :href="slide.url" class="block w-full h-full">
+                                        <img :src="slide.image_path" loading="lazy" decoding="async" class="w-full h-full object-cover select-none cursor-pointer" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
+                                    </a>
+                                </template>
+                                <template x-if="!slide.url">
+                                    <img :src="slide.image_path" loading="lazy" decoding="async" class="w-full h-full object-cover select-none" :alt="'Promotional banner ' + (index + 1) + ' at {{ \App\Services\SeoService::STORE_NAME }}'">
+                                </template>
+                            </div>
+                        </template>
                     </template>
                 </div>
                 

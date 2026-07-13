@@ -344,21 +344,37 @@ new class extends Component
                          }
                      "
                 >
-                    <template x-for="(item, idx) in mediaItems" :key="idx">
-                        <div :id="'main-slide-' + idx" 
+                    <!-- Server-Side Pre-rendered First Image (LCP Optimization) -->
+                    @if(is_array($product->images) && count($product->images) > 0)
+                        <div id="main-slide-0" 
                              class="w-full h-full flex-shrink-0 snap-start bg-white flex items-center justify-center relative cursor-zoom-in"
-                             @click="if(item.type === 'image') lightboxOpen = true"
+                             @click="lightboxOpen = true"
                         >
-                            <template x-if="item.type === 'image'">
-                                <img :src="item.url" loading="eager" decoding="async" alt="{{ $product->name }}" 
-                                     class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
-                                     :style="zoom && activeIndex === idx ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
-                                >
-                            </template>
-                            <template x-if="item.type === 'video'">
-                                <video :src="item.url" controls autoplay muted @ended="goToNext()" class="h-full w-full object-contain bg-black"></video>
-                            </template>
+                            <img src="{{ $product->images[0] }}" loading="eager" decoding="sync" fetchpriority="high" alt="{{ $product->name }}" 
+                                 class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
+                                 :style="zoom && activeIndex === 0 ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
+                            >
                         </div>
+                    @endif
+
+                    <!-- Remaining Items via Alpine (Index > 0) -->
+                    <template x-for="(item, idx) in mediaItems" :key="idx">
+                        <template x-if="idx > 0">
+                            <div :id="'main-slide-' + idx" 
+                                 class="w-full h-full flex-shrink-0 snap-start bg-white flex items-center justify-center relative cursor-zoom-in"
+                                 @click="if(item.type === 'image') lightboxOpen = true"
+                            >
+                                <template x-if="item.type === 'image'">
+                                    <img :src="item.url" loading="lazy" decoding="async" alt="{{ $product->name }}" 
+                                         class="h-full w-full object-cover transition-transform duration-75 ease-out origin-center"
+                                         :style="zoom && activeIndex === idx ? `transform: scale(2.2); transform-origin: ${x}% ${y}%;` : 'transform: scale(1); transform-origin: center;'"
+                                    >
+                                </template>
+                                <template x-if="item.type === 'video'">
+                                    <video :src="item.url" controls autoplay muted @ended="goToNext()" class="h-full w-full object-contain bg-black"></video>
+                                </template>
+                            </div>
+                        </template>
                     </template>
                 </div>
 
