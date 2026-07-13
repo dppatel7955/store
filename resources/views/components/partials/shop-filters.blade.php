@@ -71,7 +71,7 @@
                 inputmode="numeric"
                 class="w-full min-h-11 bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-600"
             />
-            <span class="text-slate-400 text-sm shrink-0">to</span>
+            <span class="text-slate-500 text-sm shrink-0">to</span>
             <input
                 type="number"
                 wire:model.live.debounce.500ms="maxPrice"

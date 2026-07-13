@@ -254,7 +254,7 @@ new class extends Component
                                 <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
                                     <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                     @if($prod->sale_price)
-                                        <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                        <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-600 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                             {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                         </span>
                                     @endif
@@ -272,7 +272,7 @@ new class extends Component
                                         <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                                             @if($prod->sale_price)
                                                 <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                                <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                                <span class="text-[10px] sm:text-xs text-slate-500 line-through">₹{{ number_format($prod->price) }}</span>
                                             @else
                                                 <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
                                             @endif
@@ -439,7 +439,7 @@ new class extends Component
                                     <div class="aspect-square w-full relative overflow-hidden bg-slate-50 border-b border-slate-100">
                                         <img src="{{ $prod->images[0] ?? 'https://images.unsplash.com/photo-1523275335684-37898b6baf30?q=80&w=600&auto=format&fit=crop' }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                         @if($prod->sale_price)
-                                            <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                            <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-600 text-white text-[9px] sm:text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                                 {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                             </span>
                                         @endif
@@ -457,7 +457,7 @@ new class extends Component
                                             <div class="flex items-baseline flex-wrap gap-1.5 sm:gap-2 mb-3 sm:mb-4">
                                                 @if($prod->sale_price)
                                                     <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                                    <span class="text-[10px] sm:text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                                    <span class="text-[10px] sm:text-xs text-slate-500 line-through">₹{{ number_format($prod->price) }}</span>
                                                 @else
                                                     <span class="text-xs sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
                                                 @endif

@@ -510,8 +510,8 @@ new class extends Component
                             <template x-if="selectedVariantSalePrice">
                                 <div class="flex items-baseline gap-3 flex-wrap">
                                     <span class="text-3xl font-extrabold text-slate-900" x-text="'₹' + Number(selectedVariantSalePrice).toLocaleString()"></span>
-                                    <span class="text-sm text-slate-400 line-through" x-text="'₹' + Number(selectedVariantPrice).toLocaleString()"></span>
-                                    <span class="bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm" x-text="Math.round(100 - (Number(selectedVariantSalePrice) / Number(selectedVariantPrice) * 100)) + '% OFF'"></span>
+                                    <span class="text-sm text-slate-500 line-through" x-text="'₹' + Number(selectedVariantPrice).toLocaleString()"></span>
+                                    <span class="bg-rose-600 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm" x-text="Math.round(100 - (Number(selectedVariantSalePrice) / Number(selectedVariantPrice) * 100)) + '% OFF'"></span>
                                 </div>
                             </template>
                             <template x-if="!selectedVariantSalePrice">
@@ -523,8 +523,8 @@ new class extends Component
                         <div class="flex items-baseline gap-3 flex-wrap">
                             @if($product->sale_price)
                                 <span class="text-3xl font-extrabold text-slate-900">₹{{ number_format($product->sale_price) }}</span>
-                                <span class="text-sm text-slate-400 line-through">₹{{ number_format($product->price) }}</span>
-                                <span class="bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                <span class="text-sm text-slate-500 line-through">₹{{ number_format($product->price) }}</span>
+                                <span class="bg-rose-600 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                     {{ round(100 - ($product->sale_price / $product->price * 100)) }}% OFF
                                 </span>
                             @else
@@ -833,8 +833,8 @@ new class extends Component
                 @auth
                     <form wire:submit="submitReview" class="space-y-4">
                         <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Rating</label>
-                            <select wire:model="rating" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600">
+                            <label for="rating" class="block text-xs font-semibold text-slate-500 mb-1.5">Rating</label>
+                            <select id="rating" wire:model="rating" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600">
                                 <option value="5">5 Stars - Excellent</option>
                                 <option value="4">4 Stars - Good</option>
                                 <option value="3">3 Stars - Average</option>
@@ -876,7 +876,7 @@ new class extends Component
                         <div class="aspect-square relative overflow-hidden bg-slate-50">
                             <img src="{{ $prod->images[0] }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-550">
                             @if($prod->sale_price)
-                                <span class="absolute top-2 left-2 bg-rose-500 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                <span class="absolute top-2 left-2 bg-rose-600 text-white text-[9px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                     {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                 </span>
                             @endif
@@ -889,7 +889,7 @@ new class extends Component
                             <div class="mt-2 flex items-baseline gap-2 flex-wrap">
                                 @if($prod->sale_price)
                                     <span class="text-sm font-bold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                    <span class="text-xs text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                    <span class="text-xs text-slate-500 line-through">₹{{ number_format($prod->price) }}</span>
                                     <span class="text-[10px] font-extrabold text-rose-600">
                                         {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                     </span>

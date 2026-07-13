@@ -201,7 +201,9 @@ new class extends Component
                     @endif
                 </button>
 
+                <label for="sortBy" class="sr-only">Sort products by</label>
                 <select
+                    id="sortBy"
                     wire:model.live="sortBy"
                     class="flex-1 sm:flex-none min-h-11 bg-white border border-slate-200 rounded-xl py-2.5 px-3 text-sm text-slate-700 focus:outline-none focus:border-indigo-600 transition shadow-sm"
                 >
@@ -356,7 +358,7 @@ new class extends Component
                             <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100 block">
                                 <img src="{{ $image }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                 @if($prod->sale_price)
-                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-500 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
+                                    <span class="absolute top-2 left-2 sm:top-3 sm:left-3 bg-rose-600 text-white text-[10px] font-bold uppercase px-2 py-0.5 rounded-full shadow-sm">
                                         {{ round(100 - ($prod->sale_price / $prod->price * 100)) }}% OFF
                                     </span>
                                 @endif
@@ -372,7 +374,7 @@ new class extends Component
                                     <div class="flex items-baseline flex-wrap gap-1.5 mb-3">
                                         @if($prod->sale_price)
                                             <span class="text-sm sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->sale_price) }}</span>
-                                            <span class="text-[11px] text-slate-400 line-through">₹{{ number_format($prod->price) }}</span>
+                                            <span class="text-[11px] text-slate-500 line-through">₹{{ number_format($prod->price) }}</span>
                                         @else
                                             <span class="text-sm sm:text-base font-extrabold text-slate-900">₹{{ number_format($prod->price) }}</span>
                                         @endif
