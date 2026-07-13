@@ -160,11 +160,15 @@ new class extends Component
                 
                 <!-- Navigation Dots -->
                 <template x-if="slides.length > 1">
-                    <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-2 z-10">
+                    <div class="absolute bottom-4 left-0 right-0 flex justify-center gap-3 z-10">
                         <template x-for="(slide, index) in slides" :key="index">
                             <button @click="activeSlide = index" 
-                                    :class="activeSlide === index ? 'bg-indigo-600 w-6' : 'bg-slate-400/60 hover:bg-slate-500 w-2'" 
-                                    class="h-2 rounded-full transition-all duration-300 shadow-sm"></button>
+                                    :aria-label="'Go to slide ' + (index + 1)"
+                                    class="w-8 h-8 flex items-center justify-center group focus:outline-none"
+                            >
+                                <span :class="activeSlide === index ? 'bg-indigo-600 w-6 h-2' : 'bg-slate-400/60 hover:bg-slate-500 w-2 h-2'" 
+                                      class="rounded-full transition-all duration-300 shadow-sm block"></span>
+                            </button>
                         </template>
                     </div>
                 </template>
@@ -173,13 +177,15 @@ new class extends Component
                 <template x-if="slides.length > 1">
                     <div class="hidden md:block">
                         <button @click="activeSlide = (activeSlide - 1 + slides.length) % slides.length" 
-                                class="absolute left-5 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white border border-slate-200/80 p-2.5 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-md">
+                                aria-label="Previous slide"
+                                class="absolute left-5 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white border border-slate-200/80 h-12 w-12 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-md flex items-center justify-center">
                             <svg class="h-4 w-4 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7" />
                             </svg>
                         </button>
                         <button @click="activeSlide = (activeSlide + 1) % slides.length" 
-                                class="absolute right-5 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white border border-slate-200/80 p-2.5 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-md">
+                                aria-label="Next slide"
+                                class="absolute right-5 top-1/2 -translate-y-1/2 bg-white/70 hover:bg-white border border-slate-200/80 h-12 w-12 rounded-full opacity-0 group-hover:opacity-100 transition duration-300 shadow-md flex items-center justify-center">
                             <svg class="h-4 w-4 text-slate-800" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5">
                                 <path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7" />
                             </svg>
