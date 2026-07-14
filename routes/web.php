@@ -32,6 +32,20 @@ Route::get('/login', function () {
     return view('pages.login');
 })->name('login');
 
+Route::get('/forgot-password', function () {
+    if (auth()->check()) {
+        return redirect()->route('home');
+    }
+    return view('pages.forgot-password');
+})->name('password.request');
+
+Route::get('/reset-password/{token}', function ($token) {
+    if (auth()->check()) {
+        return redirect()->route('home');
+    }
+    return view('pages.reset-password', compact('token'));
+})->name('password.reset');
+
 Route::get('/register', function () {
     if (auth()->check()) {
         return redirect()->route('home');

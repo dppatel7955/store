@@ -96,7 +96,10 @@ new class extends Component
             </div>
 
             <div>
-                <label class="block text-xs font-semibold text-slate-555 mb-1.5">Password</label>
+                <div class="flex justify-between items-center mb-1.5">
+                    <label class="block text-xs font-semibold text-slate-555">Password</label>
+                    <a href="{{ route('password.request') }}" class="text-[11px] font-bold text-indigo-600 hover:underline">Forgot Password?</a>
+                </div>
                 <input type="password" wire:model="password" placeholder="••••••••" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600">
                 @error('password') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
             </div>
