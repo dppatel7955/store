@@ -342,7 +342,7 @@ new class extends Component
                                     <button @click="showQuickAdd = false" class="text-[9px] text-slate-400 font-semibold text-center mt-1 hover:text-slate-600">Cancel</button>
                                 </div>
                             @endif
-                        </div></div>
+                        </div>
                     @endforeach
                 </div>
             </div>
