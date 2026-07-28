@@ -29,6 +29,9 @@ new class extends Component
     // Google Analytics ID
     public string $googleAnalyticsId = '';
 
+    // Global Free Shipping Threshold
+    public $globalFreeShippingThreshold = 999;
+
     public function mount()
     {
         $this->loadBanners();
@@ -53,6 +56,9 @@ new class extends Component
                 }
                 if (isset($settings['google_analytics_id'])) {
                     $this->googleAnalyticsId = $settings['google_analytics_id'];
+                }
+                if (isset($settings['global_free_shipping_threshold'])) {
+                    $this->globalFreeShippingThreshold = $settings['global_free_shipping_threshold'];
                 }
             }
         }
@@ -108,6 +114,7 @@ new class extends Component
             'sliders.*.limit' => 'required|integer|min:1|max:20',
             'sliders.*.product_ids' => 'nullable|array',
             'googleAnalyticsId' => 'nullable|string|max:100',
+            'globalFreeShippingThreshold' => 'required|numeric|min:0',
         ]);
 
         $settingsPath = storage_path('app/home_settings.json');
@@ -118,6 +125,7 @@ new class extends Component
 
         $settings['sliders'] = $this->sliders;
         $settings['google_analytics_id'] = trim($this->googleAnalyticsId);
+        $settings['global_free_shipping_threshold'] = (float) $this->globalFreeShippingThreshold;
 
         file_put_contents($settingsPath, json_encode($settings, JSON_PRETTY_PRINT));
         $this->clearHomeCache();
@@ -527,6 +535,28 @@ new class extends Component
                     />
                     <p class="text-[11px] text-slate-500">Enter your GA4 Measurement ID (e.g. <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">G-QNDMCPH3HH</code> or <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">QNDMCPH3HH</code>). The tracking snippet will automatically load on all storefront pages.</p>
                     @error('googleAnalyticsId') <span class="text-xs text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                </div>
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Global Free Shipping Threshold (₹)</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Set the default minimum subtotal order amount required for customers to unlock free shipping across the store.</p>
+                </div>
+
+                <div class="space-y-2 max-w-lg">
+                    <label for="shipping_threshold_input" class="block text-xs font-semibold text-slate-700">Default Free Shipping Goal (₹)</label>
+                    <div class="relative">
+                        <span class="absolute left-3 top-2.5 text-xs font-bold text-slate-400">₹</span>
+                        <input 
+                            type="number"
+                            step="1"
+                            id="shipping_threshold_input"
+                            wire:model="globalFreeShippingThreshold"
+                            placeholder="999"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-8 pr-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                        />
+                    </div>
+                    <p class="text-[11px] text-slate-500">Individual products can override this threshold in their product settings.</p>
+                    @error('globalFreeShippingThreshold') <span class="text-xs text-rose-600 font-semibold">{{ $message }}</span> @enderror
                 </div>
             </div>
 

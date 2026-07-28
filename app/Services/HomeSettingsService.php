@@ -75,6 +75,28 @@ class HomeSettingsService
         return $rawId;
     }
 
+    public static function globalFreeShippingThreshold(): float
+    {
+        $threshold = self::get()['global_free_shipping_threshold'] ?? 999;
+        return (float) $threshold;
+    }
+
+    public static function whatsappNumber(): string
+    {
+        $num = preg_replace('/[^0-9]/', '', (string) (self::get()['whatsapp_number'] ?? '919876543210'));
+        return ! empty($num) ? $num : '919876543210';
+    }
+
+    public static function topAnnouncement(): array
+    {
+        return [
+            'enabled' => (bool) (self::get()['announcement_enabled'] ?? true),
+            'text' => self::get()['announcement_text'] ?? '⚡ Special Offer: Use Code SAVE10 for Extra 10% OFF + FREE Express Shipping!',
+            'coupon_code' => self::get()['announcement_coupon'] ?? 'SAVE10',
+            'countdown_end' => self::get()['announcement_countdown'] ?? now()->addHours(6)->toIso8601String(),
+        ];
+    }
+
     public static function clearCache(): void
     {
         Cache::forget('home_settings');

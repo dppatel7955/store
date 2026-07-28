@@ -30,7 +30,9 @@ class Product extends Model
         'is_featured',
         'category_id',
         'brand_id',
+        'bundle_product_id',
         'variant_type',
+        'free_shipping_threshold',
     ];
 
     protected $casts = [
@@ -39,7 +41,17 @@ class Product extends Model
         'images' => 'array',
         'price' => 'decimal:2',
         'sale_price' => 'decimal:2',
+        'free_shipping_threshold' => 'decimal:2',
     ];
+
+    public function getEffectiveFreeShippingThreshold(): float
+    {
+        if (! is_null($this->free_shipping_threshold)) {
+            return (float) $this->free_shipping_threshold;
+        }
+
+        return \App\Services\HomeSettingsService::globalFreeShippingThreshold();
+    }
 
     public function category()
     {
@@ -49,6 +61,11 @@ class Product extends Model
     public function brand()
     {
         return $this->belongsTo(Brand::class);
+    }
+
+    public function bundleProduct()
+    {
+        return $this->belongsTo(Product::class, 'bundle_product_id');
     }
 
     public function reviews()

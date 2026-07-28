@@ -34,6 +34,7 @@ new class extends Component
     public string $phone = '';
     public string $paymentMethod = 'cod';
     public string $notes = '';
+    public string $shippingZoneName = '';
     public array $availablePaymentMethods = [];
 
     protected function throttleKey(string $action): string
@@ -146,6 +147,9 @@ new class extends Component
             return redirect()->route('shop');
         }
         $this->subtotal = CartService::getSubtotal();
+        if (session()->has('applied_coupon_code')) {
+            $this->appliedCoupon = session()->get('applied_coupon_code');
+        }
         if ($this->subtotal > 50000) {
             $this->shipping = 0.00;
         }
@@ -221,6 +225,7 @@ new class extends Component
         }
 
         $this->appliedCoupon = $coupon->code;
+        session()->put('applied_coupon_code', $coupon->code);
         $this->discount = $calculatedDiscount;
         $this->recalculateTotals();
 
@@ -230,17 +235,44 @@ new class extends Component
     public function removeCoupon()
     {
         $this->appliedCoupon = null;
+        session()->forget('applied_coupon_code');
         $this->discount = 0.00;
         $this->couponCode = '';
         $this->recalculateTotals();
         $this->dispatch('swal', title: 'Coupon Removed!', text: 'Coupon has been removed.', icon: 'info');
     }
 
+    public function updatedCity()
+    {
+        $this->recalculateShipping();
+    }
+
+    public function updatedState()
+    {
+        $this->recalculateShipping();
+    }
+
+    public function updatedZip()
+    {
+        $this->recalculateShipping();
+    }
+
+    public function recalculateShipping()
+    {
+        $rateData = \App\Services\ShippingService::calculateRate(
+            $this->city,
+            $this->state,
+            $this->zip,
+            $this->subtotal
+        );
+
+        $this->shipping = $rateData['charge'];
+        $this->shippingZoneName = $rateData['zone_name'];
+    }
+
     public function recalculateTotals()
     {
-        if ($this->subtotal > 50000) {
-            $this->shipping = 0.00;
-        }
+        $this->recalculateShipping();
         $this->grandTotal = max(0, $this->subtotal - $this->discount + $this->shipping);
     }
 
@@ -738,8 +770,13 @@ new class extends Component
                             <span>- ₹{{ number_format($discount) }}</span>
                         </div>
                     @endif
-                    <div class="flex justify-between">
-                        <span>Shipping</span>
+                    <div class="flex justify-between items-center">
+                        <div class="flex flex-col">
+                            <span>Shipping</span>
+                            @if(!empty($shippingZoneName))
+                                <span class="text-[10px] text-indigo-600 font-medium">({{ $shippingZoneName }})</span>
+                            @endif
+                        </div>
                         @if($shipping > 0)
                             <span class="font-semibold text-slate-800">₹{{ number_format($shipping) }}</span>
                         @else

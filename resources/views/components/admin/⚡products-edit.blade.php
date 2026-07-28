@@ -32,6 +32,8 @@ new class extends Component
     public $brand_id = '';
     public $is_active = true;
     public $is_featured = false;
+    public $free_shipping_threshold = null;
+    public $bundle_product_id = null;
 
     // Variants field
     public string $variant_type = 'other';
@@ -40,11 +42,13 @@ new class extends Component
 
     public $categoriesList = [];
     public $brandsList = [];
+    public $allProductsList = [];
 
     public function mount($id)
     {
         $this->categoriesList = Category::orderBy('name')->get();
         $this->brandsList = Brand::orderBy('name')->get();
+        $this->allProductsList = Product::where('id', '!=', $id)->where('is_active', true)->orderBy('name')->get();
 
         $product = Product::with('variants')->findOrFail($id);
         $this->productId = $product->id;
@@ -60,8 +64,10 @@ new class extends Component
         $this->description = $product->description;
         $this->category_id = $product->category_id;
         $this->brand_id = $product->brand_id;
+        $this->bundle_product_id = $product->bundle_product_id;
         $this->is_active = (bool) $product->is_active;
         $this->is_featured = (bool) $product->is_featured;
+        $this->free_shipping_threshold = $product->free_shipping_threshold;
         $this->variant_type = $product->variant_type ?? 'other';
 
         foreach ($product->variants as $variant) {
@@ -204,6 +210,7 @@ new class extends Component
             'brand_id' => 'nullable|exists:brands,id',
             'is_active' => 'required|boolean',
             'is_featured' => 'required|boolean',
+            'free_shipping_threshold' => 'nullable|numeric|min:0',
             'variant_type' => 'required|in:color,size,weight,other',
             // Variants validation
             'variants.*.name' => 'required|min:1|max:255',
@@ -271,8 +278,10 @@ new class extends Component
             'description' => $this->description,
             'category_id' => $this->category_id,
             'brand_id' => $this->brand_id ?: null,
+            'bundle_product_id' => $this->bundle_product_id ?: null,
             'is_active' => $this->is_active,
             'is_featured' => $this->is_featured,
+            'free_shipping_threshold' => $this->free_shipping_threshold !== '' ? $this->free_shipping_threshold : null,
             'variant_type' => $this->variant_type,
         ]);
 
@@ -382,6 +391,17 @@ new class extends Component
                         </select>
                         @error('brand_id') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                     </div>
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Frequently Bought Together (Cross-Sell Item)</label>
+                    <select wire:model="bundle_product_id" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600 transition">
+                        <option value="">Auto-select (History/Category match)</option>
+                        @foreach($allProductsList as $ap)
+                            <option value="{{ $ap->id }}">{{ $ap->name }} (₹{{ number_format($ap->sale_price ?? $ap->price) }})</option>
+                        @endforeach
+                    </select>
+                    <p class="text-[11px] text-slate-400 mt-1">Pick a specific complementary item to bundle with this product on the product detail page.</p>
                 </div>
             </div>
 
@@ -617,6 +637,13 @@ new class extends Component
                     <label class="block text-xs font-semibold text-slate-700 mb-1.5">Total Base Stock <span class="text-rose-500">*</span></label>
                     <input type="number" wire:model="stock" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600 transition">
                     @error('stock') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
+                </div>
+
+                <div>
+                    <label class="block text-xs font-semibold text-slate-700 mb-1.5">Individual Free Shipping Threshold (₹) <span class="text-slate-400 font-normal">(Optional)</span></label>
+                    <input type="number" step="0.01" wire:model="free_shipping_threshold" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3.5 text-xs text-slate-800 focus:outline-none focus:bg-white focus:border-indigo-600 transition" placeholder="Leave empty for store default">
+                    <p class="text-[10px] text-slate-400 mt-1">Set a custom threshold for this product (e.g. 499). Leave empty to use the global store goal.</p>
+                    @error('free_shipping_threshold') <span class="text-rose-500 text-[10px] font-bold mt-1 block">{{ $message }}</span> @enderror
                 </div>
             </div>
 

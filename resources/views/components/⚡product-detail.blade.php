@@ -17,6 +17,14 @@ new class extends Component
 
     public $relatedProducts = [];
 
+    // Amazon / Flipkart Style Pincode Delivery Estimator
+    public string $pincodeInput = '';
+    public ?array $pincodeDeliveryInfo = null;
+
+    // 1-Click WhatsApp & Bundle Cross-Sell
+    public string $whatsappNumber = '';
+    public ?Product $bundleProduct = null;
+
     public function mount(string $slug)
     {
         $this->product = Product::where('slug', $slug)
@@ -35,6 +43,88 @@ new class extends Component
             ->with('brand')
             ->limit(4)
             ->get();
+
+        // 1. Explicit Admin Selection
+        if ($this->product->bundle_product_id) {
+            $this->bundleProduct = Product::where('id', $this->product->bundle_product_id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        // 2. Order History Co-Purchase Auto Match
+        if (! $this->bundleProduct) {
+            $coOrderedProductId = \App\Models\OrderItem::whereIn('order_id', function ($query) {
+                    $query->select('order_id')
+                        ->from('order_items')
+                        ->where('product_id', $this->product->id);
+                })
+                ->where('product_id', '!=', $this->product->id)
+                ->select('product_id', \Illuminate\Support\Facades\DB::raw('COUNT(*) as count'))
+                ->groupBy('product_id')
+                ->orderByDesc('count')
+                ->value('product_id');
+
+            if ($coOrderedProductId) {
+                $this->bundleProduct = Product::where('id', $coOrderedProductId)
+                    ->where('is_active', true)
+                    ->first();
+            }
+        }
+
+        // 3. Category Fallback Match
+        if (! $this->bundleProduct) {
+            $this->bundleProduct = Product::where('category_id', $this->product->category_id)
+                ->where('id', '!=', $this->product->id)
+                ->where('is_active', true)
+                ->first();
+        }
+
+        $this->whatsappNumber = \App\Services\HomeSettingsService::whatsappNumber();
+
+        if (session()->has('user_pincode')) {
+            $this->pincodeInput = session()->get('user_pincode');
+            $this->checkPincodeDelivery();
+        }
+    }
+
+    public function addBundleToCart()
+    {
+        CartService::add($this->product->id, $this->quantity, $this->selectedVariantId);
+        if ($this->bundleProduct) {
+            CartService::add($this->bundleProduct->id, 1);
+        }
+        $this->dispatch('cartUpdated');
+        $this->dispatch('open-cart-drawer');
+        $this->dispatch('swal', title: 'Bundle Added!', text: 'Both items added to your cart with extra savings.', icon: 'success');
+    }
+
+    public function checkPincodeDelivery()
+    {
+        $pincode = trim($this->pincodeInput);
+        if (empty($pincode)) {
+            $this->pincodeDeliveryInfo = null;
+            return;
+        }
+
+        $effectivePrice = (float) ($this->product->sale_price ?? $this->product->price);
+        $rateData = \App\Services\ShippingService::calculateRate(
+            $pincode,
+            $pincode,
+            $pincode,
+            $effectivePrice,
+            $this->product->getEffectiveFreeShippingThreshold()
+        );
+
+        $this->pincodeDeliveryInfo = [
+            'pincode' => $pincode,
+            'zone' => $rateData['zone_name'],
+            'charge' => $rateData['charge'],
+            'is_free' => $rateData['is_free'],
+            'delivery_date' => $rateData['delivery_date'],
+            'estimated_days' => $rateData['estimated_days'],
+        ];
+
+        session()->put('user_pincode', $pincode);
     }
 
     public function incrementQuantity()
@@ -719,7 +809,149 @@ new class extends Component
                                 Adding...
                             </span>
                         </button>
+
+                        <!-- 1-Click WhatsApp Quick Order Button -->
+                        <a 
+                            href="https://wa.me/{{ $whatsappNumber }}?text={{ urlencode('Hello! I want to order/inquire about: ' . $product->name . ' (₹' . number_format($product->sale_price ?? $product->price) . ') - ' . url()->current()) }}"
+                            target="_blank"
+                            class="rounded-xl bg-emerald-600 hover:bg-emerald-500 h-12 px-4 text-xs font-bold text-white shadow-xs transition flex items-center justify-center gap-2 shrink-0"
+                            title="Quick Order via WhatsApp"
+                        >
+                            <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24">
+                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+                            </svg>
+                            <span>WhatsApp</span>
+                        </a>
                     </div>
+
+                <!-- Frequently Bought Together / Cross-Sell Bundle Widget -->
+                @if($bundleProduct)
+                    <div class="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-5 space-y-4">
+                        <div class="flex items-center justify-between">
+                            <h3 class="text-xs font-bold text-indigo-950 uppercase tracking-wider flex items-center gap-1.5">
+                                <svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
+                                </svg>
+                                Frequently Bought Together
+                            </h3>
+                            <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-emerald-100 text-emerald-800 border border-emerald-200">Bundle Discount</span>
+                        </div>
+
+                        <div class="flex items-center gap-4 bg-white p-3.5 rounded-xl border border-slate-200/80 shadow-xs">
+                            <div class="h-14 w-14 rounded-lg bg-slate-50 border border-slate-200 p-0.5 shrink-0 overflow-hidden">
+                                @if(is_array($product->images) && count($product->images) > 0)
+                                    <img src="{{ $product->images[0] }}" class="h-full w-full object-cover rounded">
+                                @endif
+                            </div>
+                            <span class="text-slate-400 font-bold text-lg">+</span>
+                            <div class="h-14 w-14 rounded-lg bg-slate-50 border border-slate-200 p-0.5 shrink-0 overflow-hidden">
+                                @if(is_array($bundleProduct->images) && count($bundleProduct->images) > 0)
+                                    <img src="{{ $bundleProduct->images[0] }}" class="h-full w-full object-cover rounded">
+                                @endif
+                            </div>
+                            <div class="flex-1 min-w-0">
+                                <h4 class="text-xs font-bold text-slate-900 truncate">{{ $bundleProduct->name }}</h4>
+                                <div class="flex items-center gap-1.5 mt-0.5">
+                                    <span class="text-xs font-extrabold text-slate-900">₹{{ number_format($bundleProduct->sale_price ?? $bundleProduct->price) }}</span>
+                                    @if($bundleProduct->sale_price)
+                                        <span class="text-[10px] text-slate-400 line-through">₹{{ number_format($bundleProduct->price) }}</span>
+                                    @endif
+                                </div>
+                                <p class="text-[10px] text-slate-500 mt-0.5">Combined Value: ₹{{ number_format(($product->sale_price ?? $product->price) + ($bundleProduct->sale_price ?? $bundleProduct->price)) }}</p>
+                            </div>
+                        </div>
+
+                        <div class="flex items-center justify-between pt-1">
+                            <div>
+                                <span class="text-[11px] text-slate-500 block font-medium">Bundle Price:</span>
+                                <span class="text-base font-black text-indigo-700">₹{{ number_format((($product->sale_price ?? $product->price) + ($bundleProduct->sale_price ?? $bundleProduct->price)) * 0.95) }}</span>
+                                <span class="text-[10px] text-emerald-600 font-bold ml-1">(5% Bundle OFF)</span>
+                            </div>
+                            <button 
+                                type="button"
+                                wire:click="addBundleToCart"
+                                class="rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 px-4 text-xs font-bold text-white shadow-xs transition"
+                            >
+                                Add Both to Cart
+                            </button>
+                        </div>
+                    </div>
+                @endif
+                <!-- Amazon / Flipkart Style Delivery Options & Rate Widget -->
+                <div class="mt-6 rounded-2xl border border-slate-200 bg-slate-50/70 p-5 shadow-xs space-y-4">
+                    <div class="flex items-center justify-between">
+                        <h3 class="text-xs font-bold text-slate-800 uppercase tracking-wider flex items-center gap-1.5">
+                            <svg class="h-4 w-4 text-indigo-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17.657 16.657L13.414 20.9a1.998 1.998 0 01-2.827 0l-4.244-4.243a8 8 0 1111.314 0z" />
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M15 11a3 3 0 11-6 0 3 3 0 016 0z" />
+                            </svg>
+                            Delivery & Serviceability
+                        </h3>
+                        @if($pincodeDeliveryInfo)
+                            <button type="button" wire:click="$set('pincodeDeliveryInfo', null)" class="text-xs font-bold text-indigo-600 hover:underline">Change</button>
+                        @endif
+                    </div>
+
+                    <div class="flex items-center gap-2">
+                        <div class="relative flex-1">
+                            <span class="absolute left-3 top-2.5 text-xs text-slate-400 font-bold">📍</span>
+                            <input 
+                                type="text" 
+                                wire:model="pincodeInput" 
+                                wire:keydown.enter="checkPincodeDelivery"
+                                placeholder="Enter Pincode" 
+                                class="w-full bg-white border border-slate-200 rounded-xl py-2 pl-8 pr-3 text-xs text-slate-800 focus:outline-none focus:border-indigo-600 transition font-medium"
+                            />
+                        </div>
+                        <button 
+                            type="button" 
+                            wire:click="checkPincodeDelivery" 
+                            class="rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2 px-4 text-xs font-bold text-white shadow-xs transition"
+                        >
+                            Check
+                        </button>
+                    </div>
+
+                    @if($pincodeDeliveryInfo)
+                        <div class="rounded-xl bg-white border border-slate-200 p-3.5 space-y-2.5 text-xs text-slate-700 shadow-xs">
+                            <div class="flex items-center justify-between border-b border-slate-100 pb-2">
+                                <span class="font-bold text-slate-900 flex items-center gap-1.5">
+                                    <svg class="h-4 w-4 text-emerald-600" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                                    </svg>
+                                    Delivery for Pincode {{ $pincodeDeliveryInfo['pincode'] }}
+                                </span>
+                                <span class="text-[10px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-indigo-50 text-indigo-700 border border-indigo-100">
+                                    {{ $pincodeDeliveryInfo['zone'] }}
+                                </span>
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-600">Shipping Rate:</span>
+                                @if($pincodeDeliveryInfo['is_free'])
+                                    <span class="text-emerald-700 font-extrabold bg-emerald-50 px-2 py-0.5 rounded border border-emerald-200 uppercase">FREE Delivery</span>
+                                @else
+                                    <span class="font-bold text-slate-900">₹{{ number_format($pincodeDeliveryInfo['charge'], 2) }}</span>
+                                @endif
+                            </div>
+
+                            <div class="flex items-center justify-between">
+                                <span class="text-slate-600">Estimated Arrival:</span>
+                                <span class="font-extrabold text-indigo-700">{{ $pincodeDeliveryInfo['delivery_date'] }} ({{ $pincodeDeliveryInfo['estimated_days'] }})</span>
+                            </div>
+
+                            <div class="pt-1.5 border-t border-slate-100 text-[11px] text-slate-500 flex items-center gap-4">
+                                <span class="flex items-center gap-1 text-emerald-700 font-semibold">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    COD Available
+                                </span>
+                                <span class="flex items-center gap-1 text-emerald-700 font-semibold">
+                                    <svg class="h-3.5 w-3.5" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7"/></svg>
+                                    7-Day Replacement
+                                </span>
+                            </div>
+                        </div>
+                    @endif
                 </div>
 
                 <!-- Product Share Options -->
@@ -794,74 +1026,156 @@ new class extends Component
     </section>
 
     <!-- Reviews Section -->
-    <section class="border-t border-slate-200 pt-8 grid grid-cols-1 lg:grid-cols-3 gap-12">
-        <!-- Review Listing -->
-        <div class="lg:col-span-2 space-y-6">
-            <h2 class="text-xl font-bold text-slate-900 mb-2">Customer Reviews ({{ $product->reviews->count() }})</h2>
-            
-            @if($product->reviews->count() > 0)
-                <div class="space-y-4">
-                    @foreach($product->reviews as $rev)
-                        <div class="bg-slate-50/60 border border-slate-200 p-5 rounded-xl space-y-2">
-                            <div class="flex items-center justify-between">
-                                <span class="text-sm font-bold text-slate-800">{{ $rev->user->name }}</span>
-                                <span class="text-xs text-slate-400">{{ $rev->created_at->diffForHumans() }}</span>
-                            </div>
-                            <div class="flex text-amber-400">
-                                @for($i = 1; $i <= $rev->rating; $i++)
-                                    <svg class="h-3 w-3 fill-current" viewBox="0 0 20 20">
-                                        <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
-                                    </svg>
-                                @endfor
-                            </div>
-                            <p class="text-sm text-slate-650 leading-relaxed">{{ $rev->comment }}</p>
-                        </div>
-                    @endforeach
+    <section class="border-t border-slate-200/80 pt-10 space-y-8">
+        <!-- Section Header with Overall Rating Summary -->
+        <div class="bg-gradient-to-r from-slate-900 via-indigo-950 to-slate-900 text-white rounded-3xl p-6 sm:p-8 shadow-md flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="space-y-1 text-center md:text-left">
+                <span class="text-[10px] font-extrabold uppercase tracking-widest text-indigo-400">Customer Feedback</span>
+                <h2 class="text-2xl sm:text-3xl font-extrabold tracking-tight">Ratings & Reviews</h2>
+                <p class="text-xs text-slate-300">Read verified buyer experiences or leave your feedback below.</p>
+            </div>
+
+            @php
+                $avgRating = $product->reviews->count() > 0 ? round($product->reviews->avg('rating'), 1) : 5.0;
+            @endphp
+            <div class="flex items-center gap-4 bg-white/10 backdrop-blur-md border border-white/15 px-5 py-3.5 rounded-2xl shrink-0">
+                <div class="text-center">
+                    <span class="text-3xl font-black text-amber-400">{{ $avgRating }}</span>
+                    <span class="text-[10px] text-slate-300 block font-semibold">out of 5</span>
                 </div>
-            @else
-                <p class="text-sm text-slate-450 italic">No reviews yet for this product. Be the first to share your thoughts!</p>
-            @endif
+                <div class="space-y-1">
+                    <div class="flex text-amber-400">
+                        @for($i = 1; $i <= 5; $i++)
+                            <svg class="h-4 w-4 {{ $i <= round($avgRating) ? 'fill-amber-400' : 'fill-slate-600' }}" viewBox="0 0 20 20">
+                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                            </svg>
+                        @endfor
+                    </div>
+                    <span class="text-[11px] text-slate-200 font-bold block">{{ $product->reviews->count() }} Verified Reviews</span>
+                </div>
+            </div>
         </div>
 
-        <!-- Add Review form -->
-        <div class="lg:col-span-1">
-            <div class="bg-white border border-slate-200 rounded-2xl p-6 sticky top-24 space-y-4 shadow-sm">
-                <h3 class="font-bold text-slate-900 border-b border-slate-200 pb-3">Share Your Experience</h3>
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+            <!-- Review Listing -->
+            <div class="lg:col-span-7 space-y-4">
+                <h3 class="text-base font-extrabold text-slate-900 flex items-center justify-between border-b border-slate-200/80 pb-3">
+                    <span>Recent Reviews</span>
+                    <span class="text-xs font-bold text-slate-500">Showing {{ $product->reviews->count() }} reviews</span>
+                </h3>
                 
-
-
-                @auth
-                    <form wire:submit="submitReview" class="space-y-4">
-                        <div>
-                            <label for="rating" class="block text-xs font-semibold text-slate-500 mb-1.5">Rating</label>
-                            <select id="rating" wire:model="rating" class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600">
-                                <option value="5">5 Stars - Excellent</option>
-                                <option value="4">4 Stars - Good</option>
-                                <option value="3">3 Stars - Average</option>
-                                <option value="2">2 Stars - Poor</option>
-                                <option value="1">1 Star - Terrible</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="block text-xs font-semibold text-slate-500 mb-1.5">Comment</label>
-                            <textarea 
-                                wire:model="comment" 
-                                rows="4" 
-                                placeholder="Write your review details here..."
-                                class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2 px-3 text-xs text-slate-700 focus:outline-none focus:border-indigo-650 focus:ring-1 focus:ring-indigo-600"
-                            ></textarea>
-                            @error('comment') <span class="text-[10px] text-rose-600 font-semibold">{{ $message }}</span> @enderror
-                        </div>
-
-                        <button type="submit" class="w-full rounded-xl bg-indigo-600 hover:bg-indigo-700 py-2.5 text-xs font-bold text-white shadow-sm transition">
-                            Submit Review
-                        </button>
-                    </form>
+                @if($product->reviews->count() > 0)
+                    <div class="space-y-4">
+                        @foreach($product->reviews as $rev)
+                            <div class="bg-white border border-slate-200/80 p-5 rounded-2xl space-y-3 shadow-2xs hover:border-indigo-200 transition">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-3">
+                                        <div class="h-9 w-9 rounded-full bg-indigo-100 text-indigo-700 font-black text-sm flex items-center justify-center border border-indigo-200 shrink-0">
+                                            {{ strtoupper(substr($rev->user->name ?? 'C', 0, 1)) }}
+                                        </div>
+                                        <div>
+                                            <h4 class="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                                                {{ $rev->user->name }}
+                                                <span class="text-[9px] font-extrabold bg-emerald-50 text-emerald-700 border border-emerald-200 px-1.5 py-0.2 rounded-full uppercase">Verified Buyer</span>
+                                            </h4>
+                                            <span class="text-[10px] text-slate-400 font-medium">{{ $rev->created_at->diffForHumans() }}</span>
+                                        </div>
+                                    </div>
+                                    <div class="flex text-amber-400">
+                                        @for($i = 1; $i <= 5; $i++)
+                                            <svg class="h-3.5 w-3.5 {{ $i <= $rev->rating ? 'fill-amber-400' : 'fill-slate-200' }}" viewBox="0 0 20 20">
+                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                            </svg>
+                                        @endfor
+                                    </div>
+                                </div>
+                                <p class="text-xs text-slate-700 leading-relaxed pl-12">{{ $rev->comment }}</p>
+                            </div>
+                        @endforeach
+                    </div>
                 @else
-                    <p class="text-xs text-slate-500 leading-relaxed text-center py-6">
-                        You must be <a href="{{ route('login') }}" class="text-indigo-650 hover:underline">signed in</a> to write a review.
-                    </p>
+                    <div class="bg-white border border-slate-200/80 rounded-2xl p-8 text-center space-y-2">
+                        <span class="text-3xl">⭐</span>
+                        <h4 class="text-sm font-bold text-slate-800">No reviews yet</h4>
+                        <p class="text-xs text-slate-500">Be the first customer to share your experience with this product!</p>
+                    </div>
                 @endif
+            </div>
+
+            <!-- Add Review form card -->
+            <div class="lg:col-span-5">
+                <div class="bg-white border border-slate-200/80 rounded-3xl p-6 sticky top-24 space-y-5 shadow-xs">
+                    <div class="border-b border-slate-100 pb-3">
+                        <h3 class="font-extrabold text-slate-900 text-sm uppercase tracking-wider">Write a Review</h3>
+                        <p class="text-[11px] text-slate-500">Your genuine review helps other shoppers make informed choices.</p>
+                    </div>
+
+                    @auth
+                        <form wire:submit="submitReview" x-data="{ hoverRating: 0 }" class="space-y-4">
+                            <!-- Star Rating Selector -->
+                            <div class="space-y-2">
+                                <div class="flex items-center justify-between">
+                                    <label class="block text-xs font-bold text-slate-700">Overall Rating <span class="text-rose-500">*</span></label>
+                                    <span class="text-[11px] font-extrabold text-indigo-700 bg-indigo-50 px-2.5 py-0.5 rounded-full border border-indigo-100">
+                                        @php
+                                            $ratingLabels = [1 => '1 Star - Poor', 2 => '2 Stars - Fair', 3 => '3 Stars - Average', 4 => '4 Stars - Good', 5 => '5 Stars - Excellent'];
+                                        @endphp
+                                        {{ $ratingLabels[$rating] ?? '5 Stars - Excellent' }}
+                                    </span>
+                                </div>
+                                <div class="flex items-center justify-center gap-2 bg-slate-50 border border-slate-200 rounded-2xl p-3">
+                                    @for($star = 1; $star <= 5; $star++)
+                                        <button 
+                                            type="button" 
+                                            wire:click="$set('rating', {{ $star }})"
+                                            @mouseenter="hoverRating = {{ $star }}"
+                                            @mouseleave="hoverRating = 0"
+                                            class="p-1 rounded-lg hover:scale-110 transition duration-150 focus:outline-none"
+                                        >
+                                            <svg class="h-6 w-6 transition duration-150" 
+                                                 :class="(hoverRating >= {{ $star }} || (hoverRating === 0 && $wire.rating >= {{ $star }})) ? 'text-amber-400 fill-amber-400' : 'text-slate-300 fill-slate-200'" 
+                                                 viewBox="0 0 20 20">
+                                                <path d="M9.049 2.927c.3-.921 1.603-.921 1.902 0l1.07 3.292a1 1 0 00.95.69h3.462c.969 0 1.371 1.24.588 1.81l-2.8 2.034a1 1 0 00-.364 1.118l1.07 3.292c.3.921-.755 1.688-1.54 1.118l-2.8-2.034a1 1 0 00-1.175 0l-2.8 2.034c-.784.57-1.838-.197-1.539-1.118l1.07-3.292a1 1 0 00-.364-1.118L2.98 8.72c-.783-.57-.38-1.81.588-1.81h3.461a1 1 0 00.951-.69l1.07-3.292z" />
+                                            </svg>
+                                        </button>
+                                    @endfor
+                                </div>
+                            </div>
+
+                            <!-- Comment Field -->
+                            <div class="space-y-1.5">
+                                <label class="block text-xs font-bold text-slate-700">Your Experience & Feedback <span class="text-rose-500">*</span></label>
+                                <textarea 
+                                    wire:model="comment" 
+                                    rows="4" 
+                                    placeholder="What did you like or dislike about this product? How was the quality, packaging, or delivery?"
+                                    class="w-full bg-slate-50 border border-slate-200 rounded-2xl p-3.5 text-xs text-slate-800 placeholder:text-slate-400 focus:outline-none focus:bg-white focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition resize-none leading-relaxed"
+                                ></textarea>
+                                @error('comment') <span class="text-[10px] text-rose-600 font-bold block">{{ $message }}</span> @enderror
+                            </div>
+
+                            <!-- Submit Button -->
+                            <button 
+                                type="submit" 
+                                class="w-full rounded-2xl bg-indigo-600 hover:bg-indigo-500 py-3.5 text-xs font-bold text-white shadow-xs transition flex items-center justify-center gap-1.5"
+                            >
+                                <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8" />
+                                </svg>
+                                Submit Review
+                            </button>
+                        </form>
+                    @else
+                        <div class="bg-indigo-50/60 border border-indigo-100 rounded-2xl p-5 text-center space-y-3">
+                            <span class="text-2xl">🔒</span>
+                            <h4 class="text-xs font-bold text-slate-800">Sign in to write a review</h4>
+                            <p class="text-[11px] text-slate-500">Only registered store buyers can submit verified product reviews.</p>
+                            <a href="{{ route('login') }}" class="block w-full rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white shadow-xs transition">
+                                Sign In Now &rarr;
+                            </a>
+                        </div>
+                    @endif
+                </div>
             </div>
         </div>
     </section>

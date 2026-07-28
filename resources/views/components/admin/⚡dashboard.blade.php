@@ -19,6 +19,9 @@ new class extends Component
     public $chartPath = '';
     public $chartAreaPath = '';
     public $chartPoints = [];
+    public float $todaySales = 0.0;
+    public int $todayOrders = 0;
+    public $lowStockProducts = [];
 
     public function mount()
     {
@@ -26,6 +29,11 @@ new class extends Component
         $this->activeOrders = Order::whereIn('status', ['pending', 'processing', 'shipped'])->count();
         $this->lowStockAlerts = Product::where('stock', '<', 5)->count();
         $this->totalCustomers = User::where('is_admin', false)->count();
+
+        $this->todaySales = (float) Order::whereDate('created_at', now()->today())->sum('grand_total');
+        $this->todayOrders = Order::whereDate('created_at', now()->today())->count();
+        $this->lowStockProducts = Product::where('stock', '<=', 5)->limit(5)->get();
+
         $this->recentOrders = Order::with('user')
             ->latest()
             ->limit(5)
@@ -267,4 +275,32 @@ new class extends Component
             </a>
         </div>
     </div>
+
+    <!-- Low Stock Quick Alert Box -->
+    @if(count($lowStockProducts) > 0)
+        <div class="bg-rose-50/70 border border-rose-200/80 rounded-2xl p-6 shadow-xs space-y-4">
+            <div class="flex items-center justify-between">
+                <div class="flex items-center gap-2">
+                    <span class="h-3 w-3 rounded-full bg-rose-500 animate-pulse"></span>
+                    <h3 class="text-xs font-bold text-rose-950 uppercase tracking-wider">Inventory Warning — Low Stock Products</h3>
+                </div>
+                <a href="{{ route('admin.stock') }}" class="text-xs font-bold text-rose-700 hover:underline">Manage Stock &rarr;</a>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5 gap-3">
+                @foreach($lowStockProducts as $p)
+                    <div class="bg-white border border-rose-200 rounded-xl p-3 shadow-2xs space-y-2">
+                        <h4 class="text-xs font-bold text-slate-900 truncate">{{ $p->name }}</h4>
+                        <div class="flex items-center justify-between text-[11px]">
+                            <span class="text-slate-500">Remaining:</span>
+                            <span class="font-extrabold text-rose-600 bg-rose-50 px-2 py-0.5 rounded border border-rose-200">{{ $p->stock }} Left</span>
+                        </div>
+                        <a href="{{ route('admin.products.edit', ['id' => $p->id]) }}" class="block text-center rounded-lg bg-rose-600 hover:bg-rose-500 py-1.5 px-2 text-[10px] font-bold text-white transition">
+                            Restock Item
+                        </a>
+                    </div>
+                @endforeach
+            </div>
+        </div>
+    @endif
 </div>

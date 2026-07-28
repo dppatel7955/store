@@ -99,6 +99,40 @@
 </head>
 <body class="h-full antialiased bg-slate-50 text-slate-900 flex flex-col min-h-screen">
     
+    <!-- Smart Top Announcement Bar -->
+    @php
+        $announcement = \App\Services\HomeSettingsService::topAnnouncement();
+    @endphp
+    @if($announcement['enabled'])
+        <div class="bg-gradient-to-r from-indigo-700 via-purple-700 to-indigo-800 text-white text-xs py-2 px-4 shadow-xs" x-data="{
+            copyText: 'Copy Code',
+            coupon: '{{ $announcement['coupon_code'] }}',
+            copyCoupon() {
+                navigator.clipboard.writeText(this.coupon);
+                this.copyText = 'Copied!';
+                setTimeout(() => this.copyText = 'Copy Code', 2000);
+            }
+        }">
+            <div class="max-w-7xl mx-auto flex flex-wrap items-center justify-between gap-2 text-center sm:text-left">
+                <div class="flex items-center gap-2 mx-auto sm:mx-0 font-medium">
+                    <span>{{ $announcement['text'] }}</span>
+                </div>
+                <div class="flex items-center gap-3 mx-auto sm:mx-0 shrink-0">
+                    <span class="bg-white/15 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase text-[11px] tracking-wider border border-white/20">
+                        {{ $announcement['coupon_code'] }}
+                    </span>
+                    <button 
+                        @click="copyCoupon" 
+                        type="button" 
+                        class="bg-white text-indigo-900 hover:bg-indigo-50 font-bold px-2.5 py-0.5 rounded-full text-[10px] uppercase transition shadow-xs"
+                    >
+                        <span x-text="copyText"></span>
+                    </button>
+                </div>
+            </div>
+        </div>
+    @endif
+
     <!-- Navigation Header -->
     <header class="sticky top-0 z-40 bg-white/95 backdrop-blur-md border-b border-slate-200 shadow-sm" x-data="{ mobileMenuOpen: false }">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -132,6 +166,7 @@
                 <nav class="hidden md:flex items-center space-x-8 text-sm font-semibold text-slate-650">
                     <a href="{{ route('home') }}" class="hover:text-indigo-600 transition-colors {{ request()->is('/') ? 'text-indigo-600 font-bold' : '' }}">Home</a>
                     <a href="{{ route('shop') }}" class="hover:text-indigo-600 transition-colors {{ request()->is('shop*') ? 'text-indigo-600 font-bold' : '' }}">Shop</a>
+                    <a href="{{ route('track-order') }}" class="hover:text-indigo-600 transition-colors {{ request()->is('track-order*') ? 'text-indigo-600 font-bold' : '' }}">Track Order</a>
                 </nav>
 
                 <!-- Search Bar (Desktop/Tablet) -->

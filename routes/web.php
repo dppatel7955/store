@@ -130,6 +130,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/payment-methods', function () {
         return view('pages.admin.payment-methods');
     })->name('admin.payment-methods');
+    Route::get('/admin/shipping-zones', function () {
+        return view('pages.admin.shipping-zones');
+    })->name('admin.shipping-zones');
     Route::get('/admin/orders/{id}/invoice', function ($id) {
         $order = \App\Models\Order::with(['items.product', 'paymentMethodConfig'])->findOrFail($id);
         return view('pages.admin.invoice', compact('order'));
@@ -163,4 +166,8 @@ Route::get('/shipping-policy', function () {
 Route::get('/refund-policy', function () {
     return view('pages.refund-policy');
 })->name('refund-policy');
+
+Route::get('/track-order', function () {
+    return view('pages.track-order');
+})->name('track-order');
 
