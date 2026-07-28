@@ -60,6 +60,21 @@ class HomeSettingsService
         ];
     }
 
+    public static function googleAnalyticsId(): ?string
+    {
+        $rawId = trim((string) (self::get()['google_analytics_id'] ?? env('GOOGLE_ANALYTICS_ID', '')));
+
+        if (empty($rawId)) {
+            return null;
+        }
+
+        if (! str_starts_with($rawId, 'G-') && ! str_starts_with($rawId, 'GTM-') && ! str_starts_with($rawId, 'UA-')) {
+            return 'G-' . $rawId;
+        }
+
+        return $rawId;
+    }
+
     public static function clearCache(): void
     {
         Cache::forget('home_settings');

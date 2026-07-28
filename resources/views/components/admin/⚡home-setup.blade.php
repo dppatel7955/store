@@ -26,6 +26,9 @@ new class extends Component
     // Dynamic Sliders Array
     public array $sliders = [];
 
+    // Google Analytics ID
+    public string $googleAnalyticsId = '';
+
     public function mount()
     {
         $this->loadBanners();
@@ -44,8 +47,13 @@ new class extends Component
         $settingsPath = storage_path('app/home_settings.json');
         if (file_exists($settingsPath)) {
             $settings = json_decode(file_get_contents($settingsPath), true);
-            if ($settings && isset($settings['sliders'])) {
-                $this->sliders = $settings['sliders'];
+            if ($settings) {
+                if (isset($settings['sliders'])) {
+                    $this->sliders = $settings['sliders'];
+                }
+                if (isset($settings['google_analytics_id'])) {
+                    $this->googleAnalyticsId = $settings['google_analytics_id'];
+                }
             }
         }
 
@@ -99,16 +107,22 @@ new class extends Component
             'sliders.*.mode' => 'required|in:latest,featured,selected',
             'sliders.*.limit' => 'required|integer|min:1|max:20',
             'sliders.*.product_ids' => 'nullable|array',
+            'googleAnalyticsId' => 'nullable|string|max:100',
         ]);
 
-        $settings = [
-            'sliders' => $this->sliders
-        ];
+        $settingsPath = storage_path('app/home_settings.json');
+        $settings = file_exists($settingsPath) ? json_decode(file_get_contents($settingsPath), true) : [];
+        if (! is_array($settings)) {
+            $settings = [];
+        }
 
-        file_put_contents(storage_path('app/home_settings.json'), json_encode($settings, JSON_PRETTY_PRINT));
+        $settings['sliders'] = $this->sliders;
+        $settings['google_analytics_id'] = trim($this->googleAnalyticsId);
+
+        file_put_contents($settingsPath, json_encode($settings, JSON_PRETTY_PRINT));
         $this->clearHomeCache();
 
-        $this->dispatch('swal', title: 'Saved!', text: 'Homepage slider sections updated successfully.', icon: 'success');
+        $this->dispatch('swal', title: 'Saved!', text: 'Home settings updated successfully.', icon: 'success');
     }
 
     public function clearHomeCache(): void
@@ -214,6 +228,12 @@ new class extends Component
                 class="shrink-0 border-b-2 py-3 px-1 text-sm font-bold transition duration-150 {{ $activeTab === 'sliders' ? 'border-indigo-600 text-indigo-650' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}"
             >
                 Homepage Sliders Setup
+            </button>
+            <button 
+                wire:click="$set('activeTab', 'analytics')"
+                class="shrink-0 border-b-2 py-3 px-1 text-sm font-bold transition duration-150 {{ $activeTab === 'analytics' ? 'border-indigo-600 text-indigo-650' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}"
+            >
+                Analytics & Tracking
             </button>
         </nav>
     </div>
@@ -485,6 +505,39 @@ new class extends Component
                     class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-500 transition"
                 >
                     Save Slider Configs
+                </button>
+            </div>
+        </form>
+    @elseif($activeTab === 'analytics')
+        <form wire:submit="saveSliderSettings" class="space-y-6">
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-4">
+                <div>
+                    <h3 class="text-base font-bold text-slate-900">Google Analytics (GA4) Integration</h3>
+                    <p class="text-xs text-slate-500 mt-0.5">Track website traffic, visitors, product views, and sales conversions automatically across all storefront pages.</p>
+                </div>
+
+                <div class="space-y-2 max-w-lg">
+                    <label for="ga_id_input" class="block text-xs font-semibold text-slate-700">Google Analytics Measurement ID / Tag ID</label>
+                    <input 
+                        type="text"
+                        id="ga_id_input"
+                        wire:model="googleAnalyticsId"
+                        placeholder="e.g. G-QNDMCPH3HH"
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                    />
+                    <p class="text-[11px] text-slate-500">Enter your GA4 Measurement ID (e.g. <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">G-QNDMCPH3HH</code> or <code class="bg-slate-100 px-1 py-0.5 rounded text-indigo-600 font-mono">QNDMCPH3HH</code>). The tracking snippet will automatically load on all storefront pages.</p>
+                    @error('googleAnalyticsId') <span class="text-xs text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                </div>
+            </div>
+
+            <!-- Footer Save -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+                <span class="text-xs text-slate-500">Save changes to update Google Analytics settings on the storefront.</span>
+                <button 
+                    type="submit"
+                    class="rounded-xl bg-indigo-600 px-5 py-2.5 text-xs font-bold text-white shadow hover:bg-indigo-500 transition"
+                >
+                    Save Analytics Settings
                 </button>
             </div>
         </form>

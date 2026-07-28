@@ -59,7 +59,7 @@ new class extends Component
     #[Computed]
     public function products()
     {
-        $query = Product::with('brand')->where('is_active', true);
+        $query = Product::with(['brand', 'variants'])->where('is_active', true);
 
         if (! empty($this->search)) {
             $query->where(function ($q) {
@@ -113,9 +113,9 @@ new class extends Component
         return $count;
     }
 
-    public function addToCart(int $productId)
+    public function addToCart(int $productId, ?int $variantId = null)
     {
-        CartService::add($productId, 1);
+        CartService::add($productId, 1, $variantId);
         $this->dispatch('cart-updated');
         $this->dispatch('toggle-cart-drawer');
     }
@@ -354,7 +354,7 @@ new class extends Component
                         @php
                             $image = is_array($prod->images) && count($prod->images) ? $prod->images[0] : 'https://placehold.co/400x400?text=No+Image';
                         @endphp
-                        <div wire:key="product-{{ $prod->id }}" class="group bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-md transition duration-300 flex flex-col h-full">
+                        <div wire:key="product-{{ $prod->id }}" x-data="{ showQuickAdd: false }" class="group relative bg-white border border-slate-200 rounded-xl sm:rounded-2xl overflow-hidden hover:border-indigo-500 hover:shadow-md transition duration-300 flex flex-col h-full">
                             <a href="{{ route('shop.detail', ['slug' => $prod->slug]) }}" class="aspect-square relative overflow-hidden bg-slate-50 border-b border-slate-100 block">
                                 <img src="{{ $image }}" loading="lazy" decoding="async" alt="{{ $prod->name }}" class="h-full w-full object-cover group-hover:scale-105 transition duration-500">
                                 @if($prod->sale_price)
@@ -380,17 +380,66 @@ new class extends Component
                                         @endif
                                     </div>
 
-                                    <button
-                                        wire:click="addToCart({{ $prod->id }})"
-                                        class="w-full min-h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white shadow transition flex items-center justify-center gap-1.5"
-                                    >
-                                        <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
-                                        </svg>
-                                        Add to Cart
-                                    </button>
+                                    @if(count($prod->variants->where('is_active', true)) > 0)
+                                        <button
+                                            @click="showQuickAdd = true"
+                                            class="w-full min-h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white shadow transition flex items-center justify-center gap-1.5"
+                                        >
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                                            </svg>
+                                            Quick Add
+                                        </button>
+                                    @else
+                                        <button
+                                            wire:click="addToCart({{ $prod->id }})"
+                                            class="w-full min-h-10 rounded-xl bg-indigo-600 hover:bg-indigo-500 py-2.5 text-xs font-bold text-white shadow transition flex items-center justify-center gap-1.5"
+                                        >
+                                            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                                            </svg>
+                                            Add to Cart
+                                        </button>
+                                    @endif
                                 </div>
                             </div>
+
+                            <!-- Variant Quick Add Overlay -->
+                            @if(count($prod->variants->where('is_active', true)) > 0)
+                                <div x-show="showQuickAdd" 
+                                     x-transition:enter="transition ease-out duration-200"
+                                     x-transition:enter-start="opacity-0 translate-y-2"
+                                     x-transition:enter-end="opacity-100 translate-y-0"
+                                     x-transition:leave="transition ease-in duration-150"
+                                     x-transition:leave-start="opacity-100 translate-y-0"
+                                     x-transition:leave-end="opacity-0 translate-y-2"
+                                     class="absolute inset-x-0 bottom-0 bg-white/95 backdrop-blur-sm p-4 border-t border-slate-100 z-10 flex flex-col gap-2"
+                                     @click.away="showQuickAdd = false"
+                                     style="display: none;"
+                                >
+                                    <p class="text-[10px] font-bold text-slate-500 uppercase tracking-wider">Select {{ $prod->variantTypeLabel() }}</p>
+                                    <div class="flex flex-wrap gap-1.5 mt-1">
+                                        @foreach($prod->variants->where('is_active', true) as $variant)
+                                            @if($prod->variant_type === \App\Models\Product::VARIANT_TYPE_COLOR)
+                                                <button @click="showQuickAdd = false; $wire.addToCart({{ $prod->id }}, {{ $variant->id }})" 
+                                                        class="h-8 w-8 rounded-full border border-slate-200 flex items-center justify-center p-0.5 hover:scale-110 transition relative group/v"
+                                                        title="{{ $variant->name }}"
+                                                >
+                                                    <span class="h-full w-full rounded-full" style="background-color: {{ $variant->colorHex() ?: '#e2e8f0' }}"></span>
+                                                    <span class="absolute bottom-full mb-1 left-1/2 transform -translate-x-1/2 bg-slate-900 text-white text-[9px] px-1.5 py-0.5 rounded shadow opacity-0 group-hover/v:opacity-100 transition whitespace-nowrap z-20">{{ $variant->name }}</span>
+                                                </button>
+                                            @else
+                                                <button @click="showQuickAdd = false; $wire.addToCart({{ $prod->id }}, {{ $variant->id }})" 
+                                                        class="min-w-8 h-8 px-2 border border-slate-200 hover:border-indigo-600 hover:text-indigo-650 rounded-lg text-xs font-bold text-slate-700 transition flex items-center justify-center"
+                                                >
+                                                    {{ $variant->displayValue() }}
+                                                </button>
+                                            @endif
+                                        @endforeach
+                                    </div>
+                                    <button @click="showQuickAdd = false" class="text-[10px] text-slate-400 font-semibold text-center mt-1 hover:text-slate-600">Cancel</button>
+                                </div>
+                            @endif
                         </div>
                     @endforeach
                 </div>
