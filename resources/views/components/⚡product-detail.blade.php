@@ -28,7 +28,7 @@ new class extends Component
     public function mount(string $slug)
     {
         $this->product = Product::where('slug', $slug)
-            ->with(['reviews.user', 'brand', 'category', 'variants' => function($q) {
+            ->with(['reviews.user', 'brand', 'category', 'bundleProduct', 'variants' => function($q) {
                 $q->where('is_active', true);
             }])
             ->firstOrFail();
