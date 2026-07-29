@@ -779,50 +779,56 @@ new class extends Component
 
                 <!-- Cart Control -->
                 <div class="space-y-4 pt-6 border-t border-slate-200 mt-6" x-show="selectedVariantStock > 0">
-                    <div class="flex items-center gap-4">
-                        <div class="flex items-center border border-slate-200 bg-slate-50 rounded-xl overflow-hidden h-12">
-                            <button wire:click="decrementQuantity" aria-label="Decrease quantity" class="h-full min-w-[48px] flex items-center justify-center text-slate-500 hover:text-slate-900 transition">
-                                -
-                            </button>
-                            <span class="px-2 font-bold text-slate-800 text-sm w-8 text-center">{{ $quantity }}</span>
-                            <button wire:click="incrementQuantity" aria-label="Increase quantity" class="h-full min-w-[48px] flex items-center justify-center text-slate-500 hover:text-slate-900 transition">
-                                +
-                            </button>
+                    <div class="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+                        <div class="flex items-center justify-between sm:justify-start border border-slate-200 bg-slate-50 rounded-xl overflow-hidden h-12 shrink-0 px-1">
+                            <span class="text-xs font-bold text-slate-500 pl-3 sm:hidden">Quantity:</span>
+                            <div class="flex items-center">
+                                <button wire:click="decrementQuantity" aria-label="Decrease quantity" class="h-full min-w-[40px] flex items-center justify-center text-slate-600 hover:text-slate-900 font-bold text-base transition">
+                                    -
+                                </button>
+                                <span class="px-2 font-extrabold text-slate-900 text-sm min-w-[32px] text-center">{{ $quantity }}</span>
+                                <button wire:click="incrementQuantity" aria-label="Increase quantity" class="h-full min-w-[40px] flex items-center justify-center text-slate-600 hover:text-slate-900 font-bold text-base transition">
+                                    +
+                                </button>
+                            </div>
                         </div>
 
-                        <button 
-                            wire:click="addToCart"
-                            wire:loading.attr="disabled"
-                            class="flex-1 rounded-xl bg-gradient-to-r from-indigo-500 to-purple-600 h-12 text-sm font-bold text-white shadow hover:from-indigo-600 hover:to-purple-700 transition flex items-center justify-center gap-2"
-                        >
-                            <span wire:loading.remove wire:target="addToCart" class="flex items-center gap-2">
-                                <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
-                                </svg>
-                                Add to Cart
-                            </span>
-                            <span wire:loading wire:target="addToCart" class="flex items-center gap-1.5">
-                                <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
-                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
-                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
-                                </svg>
-                                Adding...
-                            </span>
-                        </button>
+                        <div class="flex items-center gap-2 flex-1">
+                            <button 
+                                wire:click="addToCart"
+                                wire:loading.attr="disabled"
+                                class="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 h-12 text-sm font-bold text-white shadow-sm transition flex items-center justify-center gap-2"
+                            >
+                                <span wire:loading.remove wire:target="addToCart" class="flex items-center gap-2">
+                                    <svg class="h-5 w-5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+                                    </svg>
+                                    Add to Cart
+                                </span>
+                                <span wire:loading wire:target="addToCart" class="flex items-center gap-1.5">
+                                    <svg class="animate-spin h-4 w-4 text-white" fill="none" viewBox="0 0 24 24">
+                                        <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                        <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                    </svg>
+                                    Adding...
+                                </span>
+                            </button>
 
-                        <!-- 1-Click WhatsApp Quick Order Button -->
-                        <a 
-                            href="https://wa.me/{{ $whatsappNumber }}?text={{ urlencode('Hello! I want to order/inquire about: ' . $product->name . ' (₹' . number_format($product->sale_price ?? $product->price) . ') - ' . url()->current()) }}"
-                            target="_blank"
-                            class="rounded-xl bg-emerald-600 hover:bg-emerald-500 h-12 px-4 text-xs font-bold text-white shadow-xs transition flex items-center justify-center gap-2 shrink-0"
-                            title="Quick Order via WhatsApp"
-                        >
-                            <svg class="h-5 w-5 fill-current" viewBox="0 0 24 24">
-                                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
-                            </svg>
-                            <span>WhatsApp</span>
-                        </a>
+                            <!-- 1-Click WhatsApp Quick Order Button -->
+                            <a 
+                                href="https://wa.me/{{ $whatsappNumber }}?text={{ urlencode('Hello! I want to order/inquire about: ' . $product->name . ' (₹' . number_format($product->sale_price ?? $product->price) . ') - ' . url()->current()) }}"
+                                target="_blank"
+                                class="rounded-xl bg-emerald-600 hover:bg-emerald-500 h-12 px-4 text-xs font-bold text-white shadow-xs transition flex items-center justify-center gap-2 shrink-0"
+                                title="Quick Order via WhatsApp"
+                            >
+                                <svg class="h-5 w-5 fill-current shrink-0" viewBox="0 0 24 24">
+                                    <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+                                </svg>
+                                <span class="hidden sm:inline">WhatsApp</span>
+                            </a>
+                        </div>
                     </div>
+                </div>
 
                 <!-- Frequently Bought Together / Cross-Sell Bundle Widget -->
                 @if($bundleProduct)
@@ -1217,4 +1223,32 @@ new class extends Component
             </div>
         </section>
     @endif
+
+    <!-- Sticky Mobile Purchase Bar -->
+    <div class="fixed bottom-0 inset-x-0 z-40 bg-white/95 backdrop-blur-md border-t border-slate-200/90 p-3 shadow-2xl sm:hidden flex items-center gap-2">
+        <div class="flex-1 min-w-0 pr-2">
+            <span class="text-[10px] text-slate-500 block truncate font-medium">{{ $product->name }}</span>
+            <span class="text-sm font-extrabold text-slate-900">₹{{ number_format($product->sale_price ?? $product->price) }}</span>
+        </div>
+        <button 
+            wire:click="addToCart"
+            wire:loading.attr="disabled"
+            class="flex-1 rounded-xl bg-gradient-to-r from-indigo-600 to-purple-600 py-2.5 text-xs font-bold text-white shadow-xs transition flex items-center justify-center gap-1.5 shrink-0"
+        >
+            <svg class="h-4 w-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            Add to Cart
+        </button>
+        <a 
+            href="https://wa.me/{{ $whatsappNumber }}?text={{ urlencode('Hello! I want to order/inquire about: ' . $product->name . ' (₹' . number_format($product->sale_price ?? $product->price) . ') - ' . url()->current()) }}"
+            target="_blank"
+            class="rounded-xl bg-emerald-600 py-2.5 px-3 text-xs font-bold text-white shadow-xs transition flex items-center justify-center shrink-0"
+            title="Quick Order via WhatsApp"
+        >
+            <svg class="h-4 w-4 fill-current" viewBox="0 0 24 24">
+                <path d="M.057 24l1.687-6.163c-1.041-1.804-1.588-3.849-1.587-5.946.003-6.556 5.338-11.891 11.893-11.891 3.181.001 6.167 1.24 8.413 3.488 2.245 2.248 3.481 5.236 3.48 8.414-.003 6.557-5.338 11.892-11.893 11.892-1.99-.001-3.951-.5-5.688-1.448l-6.305 1.654zm6.597-3.807c1.676.995 3.276 1.591 5.392 1.592 5.448 0 9.886-4.434 9.889-9.885.002-5.462-4.415-9.89-9.881-9.892-5.452 0-9.887 4.434-9.889 9.884-.001 2.225.651 3.891 1.746 5.634l-.999 3.648 3.742-.981z"/>
+            </svg>
+        </a>
+    </div>
 </div>
