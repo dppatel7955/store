@@ -140,6 +140,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/stock', function () {
         return view('pages.admin.stock');
     })->name('admin.stock');
+    Route::get('/admin/visitors', function () {
+        return view('pages.admin.visitors');
+    })->name('admin.visitors');
 });
 
 Route::get('/privacy-policy', function () {

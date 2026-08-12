@@ -21,6 +21,8 @@ new class extends Component
     public $chartPoints = [];
     public float $todaySales = 0.0;
     public int $todayOrders = 0;
+    public int $liveVisitors = 0;
+    public int $todayVisitors = 0;
     public $lowStockProducts = [];
 
     public function mount()
@@ -33,6 +35,9 @@ new class extends Component
         $this->todaySales = (float) Order::whereDate('created_at', now()->today())->sum('grand_total');
         $this->todayOrders = Order::whereDate('created_at', now()->today())->count();
         $this->lowStockProducts = Product::where('stock', '<=', 5)->limit(5)->get();
+
+        $this->liveVisitors = \App\Models\Visitor::where('last_activity_at', '>=', now()->subMinutes(15))->count();
+        $this->todayVisitors = \App\Models\Visitor::whereDate('last_activity_at', now()->today())->count();
 
         $this->recentOrders = Order::with('user')
             ->latest()
@@ -129,45 +134,70 @@ new class extends Component
     </div>
 
     <!-- Metrics Cards -->
-    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
         <!-- Revenue Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
-            <div class="absolute top-0 right-0 h-16 w-16 bg-indigo-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Revenue</span>
-            <div class="text-2xl font-black text-slate-900 mt-2">₹{{ number_format($totalRevenue) }}</div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
+            <div class="absolute top-0 right-0 h-14 w-14 bg-indigo-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Total Revenue</span>
+            <div class="text-xl font-black text-slate-900 mt-1">₹{{ number_format($totalRevenue) }}</div>
             <p class="text-[10px] text-emerald-700 font-bold mt-2 flex items-center gap-1">
                 <svg class="h-3 w-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                     <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2.5" d="M13 7h8m0 0v8m0-8l-8 8-4-4-6 6" />
                 </svg>
-                From delivered orders
+                Delivered
             </p>
         </div>
 
         <!-- Active Orders Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
-            <div class="absolute top-0 right-0 h-16 w-16 bg-purple-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Active Orders</span>
-            <div class="text-2xl font-black text-slate-900 mt-2">{{ $activeOrders }}</div>
-            <p class="text-[10px] text-slate-500 font-medium mt-2">Pending/Processing/Shipped</p>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
+            <div class="absolute top-0 right-0 h-14 w-14 bg-purple-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Active Orders</span>
+            <div class="text-xl font-black text-slate-900 mt-1">{{ $activeOrders }}</div>
+            <p class="text-[10px] text-slate-500 font-medium mt-2">In Fulfillment</p>
         </div>
 
         <!-- Low Stock Alerts Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
-            <div class="absolute top-0 right-0 h-16 w-16 bg-rose-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Low Stock Products</span>
-            <div class="text-2xl font-black @if($lowStockAlerts > 0) text-rose-700 @else text-slate-900 @endif mt-2">{{ $lowStockAlerts }}</div>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
+            <div class="absolute top-0 right-0 h-14 w-14 bg-rose-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Low Stock</span>
+            <div class="text-xl font-black @if($lowStockAlerts > 0) text-rose-700 @else text-slate-900 @endif mt-1">{{ $lowStockAlerts }}</div>
             <p class="text-[10px] @if($lowStockAlerts > 0) text-rose-700 font-bold @else text-slate-500 @endif mt-2">
-                @if($lowStockAlerts > 0) Needs immediate restock @else All clear @endif
+                @if($lowStockAlerts > 0) Restock alert @else All clear @endif
             </p>
         </div>
 
         <!-- Customers Card -->
-        <div class="bg-white border border-slate-200 rounded-2xl p-6 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
-            <div class="absolute top-0 right-0 h-16 w-16 bg-pink-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
-            <span class="text-xs font-semibold text-slate-500 uppercase tracking-wider">Total Customers</span>
-            <div class="text-2xl font-black text-slate-900 mt-2">{{ $totalCustomers }}</div>
-            <p class="text-[10px] text-slate-500 font-medium mt-2">Registered buyer accounts</p>
+        <div class="bg-white border border-slate-200 rounded-2xl p-5 relative overflow-hidden group hover:border-indigo-300 transition duration-300 shadow-sm">
+            <div class="absolute top-0 right-0 h-14 w-14 bg-pink-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Customers</span>
+            <div class="text-xl font-black text-slate-900 mt-1">{{ $totalCustomers }}</div>
+            <p class="text-[10px] text-slate-500 font-medium mt-2">Registered</p>
         </div>
+
+        <!-- Today's Visitors Card -->
+        <a href="{{ route('admin.visitors') }}" class="bg-white border border-slate-200 rounded-2xl p-5 relative overflow-hidden group hover:border-indigo-400 hover:shadow-md transition duration-300 shadow-sm block">
+            <div class="absolute top-0 right-0 h-14 w-14 bg-blue-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
+            <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Today's Visits</span>
+            <div class="text-xl font-black text-slate-900 mt-1">{{ number_format($todayVisitors) }}</div>
+            <p class="text-[10px] text-indigo-600 font-bold mt-2 flex items-center justify-between">
+                <span>View Traffic</span>
+                <span>&rarr;</span>
+            </p>
+        </a>
+
+        <!-- Live Active Visitors Card -->
+        <a href="{{ route('admin.visitors') }}" class="bg-white border border-emerald-200 rounded-2xl p-5 relative overflow-hidden group hover:border-emerald-400 hover:shadow-md transition duration-300 shadow-sm block">
+            <div class="absolute top-0 right-0 h-14 w-14 bg-emerald-50 rounded-bl-full pointer-events-none group-hover:scale-110 transition duration-300"></div>
+            <div class="flex items-center justify-between">
+                <span class="text-[11px] font-semibold text-slate-500 uppercase tracking-wider">Active Now</span>
+                <span class="flex h-2.5 w-2.5 relative">
+                    <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span class="relative inline-flex rounded-full h-2.5 w-2.5 bg-emerald-500"></span>
+                </span>
+            </div>
+            <div class="text-xl font-black text-slate-900 mt-1">{{ number_format($liveVisitors) }}</div>
+            <p class="text-[10px] text-emerald-700 font-bold mt-2">Live (last 15m)</p>
+        </a>
     </div>
 
     <!-- Chart & Recent Orders -->
