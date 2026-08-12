@@ -72,8 +72,9 @@ class ProductsImport implements ToCollection, WithHeadingRow
                         'description' => isset($row['description']) ? trim($row['description']) : null,
                         'category_id' => $category ? $category->id : null,
                         'brand_id' => $brand ? $brand->id : null,
-                        'is_active' => isset($row['is_active']) ? (bool)$row['is_active'] : true,
-                        'is_featured' => isset($row['is_featured']) ? (bool)$row['is_featured'] : false,
+                        'is_active' => isset($row['is_active']) ? filter_var($row['is_active'], FILTER_VALIDATE_BOOLEAN) : true,
+                        'is_featured' => isset($row['is_featured']) ? filter_var($row['is_featured'], FILTER_VALIDATE_BOOLEAN) : false,
+                        'variant_type' => $this->resolveVariantType($row['variant_type'] ?? null),
                     ]
                 );
 
@@ -95,7 +96,9 @@ class ProductsImport implements ToCollection, WithHeadingRow
                     ],
                     [
                         'name' => trim($row['variant_name']),
+                        'value' => !empty($row['variant_value']) ? trim($row['variant_value']) : null,
                         'price' => !empty($row['variant_price']) ? (float)$row['variant_price'] : null,
+                        'sale_price' => !empty($row['variant_sale_price']) ? (float)$row['variant_sale_price'] : null,
                         'stock' => isset($row['variant_stock']) ? (int)$row['variant_stock'] : 0,
                         'images' => $variantImages,
                         'is_active' => true,
@@ -115,5 +118,17 @@ class ProductsImport implements ToCollection, WithHeadingRow
     public function getImportedVariantsCount(): int
     {
         return $this->importedVariantsCount;
+    }
+
+    private function resolveVariantType(?string $type): string
+    {
+        $type = Str::lower(trim((string) $type));
+
+        return match ($type) {
+            'color', 'shade', 'shades' => Product::VARIANT_TYPE_COLOR,
+            'size' => Product::VARIANT_TYPE_SIZE,
+            'weight' => Product::VARIANT_TYPE_WEIGHT,
+            default => Product::VARIANT_TYPE_OTHER,
+        };
     }
 }

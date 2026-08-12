@@ -32,8 +32,16 @@ new class extends Component
     // Global Free Shipping Threshold
     public $globalFreeShippingThreshold = 999;
 
+    // Top Header Announcement & Deals
+    public bool $announcementEnabled = true;
+    public string $announcementText = '⚡ Special Offer: Use Code SAVE10 for Extra 10% OFF + FREE Express Shipping!';
+    public string $announcementCoupon = 'SAVE10';
+    public string $announcementCountdown = '';
+    public string $whatsappNumber = '919876543210';
+
     public function mount()
     {
+        $this->announcementCountdown = now()->addDays(2)->format('Y-m-d\TH:i');
         $this->loadBanners();
         $this->loadSliderSettings();
     }
@@ -59,6 +67,21 @@ new class extends Component
                 }
                 if (isset($settings['global_free_shipping_threshold'])) {
                     $this->globalFreeShippingThreshold = $settings['global_free_shipping_threshold'];
+                }
+                if (isset($settings['announcement_enabled'])) {
+                    $this->announcementEnabled = (bool) $settings['announcement_enabled'];
+                }
+                if (isset($settings['announcement_text'])) {
+                    $this->announcementText = $settings['announcement_text'];
+                }
+                if (isset($settings['announcement_coupon'])) {
+                    $this->announcementCoupon = $settings['announcement_coupon'];
+                }
+                if (isset($settings['announcement_countdown'])) {
+                    $this->announcementCountdown = $settings['announcement_countdown'];
+                }
+                if (isset($settings['whatsapp_number'])) {
+                    $this->whatsappNumber = $settings['whatsapp_number'];
                 }
             }
         }
@@ -131,6 +154,35 @@ new class extends Component
         $this->clearHomeCache();
 
         $this->dispatch('swal', title: 'Saved!', text: 'Home settings updated successfully.', icon: 'success');
+    }
+
+    public function saveOffersSettings()
+    {
+        $this->validate([
+            'announcementText' => 'required|string|max:500',
+            'announcementCoupon' => 'nullable|string|max:50',
+            'announcementCountdown' => 'nullable|string',
+            'whatsappNumber' => 'required|string|max:20',
+            'globalFreeShippingThreshold' => 'required|numeric|min:0',
+        ]);
+
+        $settingsPath = storage_path('app/home_settings.json');
+        $settings = file_exists($settingsPath) ? json_decode(file_get_contents($settingsPath), true) : [];
+        if (! is_array($settings)) {
+            $settings = [];
+        }
+
+        $settings['announcement_enabled'] = (bool) $this->announcementEnabled;
+        $settings['announcement_text'] = trim($this->announcementText);
+        $settings['announcement_coupon'] = strtoupper(trim($this->announcementCoupon));
+        $settings['announcement_countdown'] = $this->announcementCountdown;
+        $settings['whatsapp_number'] = preg_replace('/[^0-9]/', '', (string) $this->whatsappNumber);
+        $settings['global_free_shipping_threshold'] = (float) $this->globalFreeShippingThreshold;
+
+        file_put_contents($settingsPath, json_encode($settings, JSON_PRETTY_PRINT));
+        $this->clearHomeCache();
+
+        $this->dispatch('swal', title: 'Saved!', text: 'Special offers and announcement settings updated successfully.', icon: 'success');
     }
 
     public function clearHomeCache(): void
@@ -238,6 +290,12 @@ new class extends Component
                 Homepage Sliders Setup
             </button>
             <button 
+                wire:click="$set('activeTab', 'offers')"
+                class="shrink-0 border-b-2 py-3 px-1 text-sm font-bold transition duration-150 flex items-center gap-1.5 {{ $activeTab === 'offers' ? 'border-indigo-600 text-indigo-650' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}"
+            >
+                <span>⚡</span> Top Announcement & Deals
+            </button>
+            <button 
                 wire:click="$set('activeTab', 'analytics')"
                 class="shrink-0 border-b-2 py-3 px-1 text-sm font-bold transition duration-150 {{ $activeTab === 'analytics' ? 'border-indigo-600 text-indigo-650' : 'border-transparent text-slate-500 hover:text-slate-700 hover:border-slate-300' }}"
             >
@@ -245,6 +303,121 @@ new class extends Component
             </button>
         </nav>
     </div>
+
+    @if($activeTab === 'offers')
+        <form wire:submit="saveOffersSettings" class="space-y-6">
+            <!-- Live Preview Banner Box -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm space-y-3">
+                <div class="flex items-center justify-between">
+                    <h3 class="text-sm font-bold text-slate-900 uppercase tracking-wider">Live Announcement Bar Preview</h3>
+                    <span class="text-[10px] font-semibold text-slate-400">Shows atop all storefront pages</span>
+                </div>
+                
+                @if($announcementEnabled)
+                    <div class="rounded-xl bg-gradient-to-r from-indigo-700 via-purple-700 to-indigo-800 text-white text-xs py-2.5 px-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
+                        <div class="flex items-center gap-2 font-medium">
+                            <span>{{ $announcementText ?: '⚡ Special Offer: Use Code SAVE10 for Extra 10% OFF + FREE Express Shipping!' }}</span>
+                        </div>
+                        @if($announcementCoupon)
+                            <div class="flex items-center gap-2 shrink-0">
+                                <span class="bg-white/20 px-2.5 py-0.5 rounded-full font-mono font-extrabold uppercase text-[11px] border border-white/20">
+                                    {{ $announcementCoupon }}
+                                </span>
+                                <span class="bg-white text-indigo-900 font-bold px-2.5 py-0.5 rounded-full text-[10px] uppercase shadow-xs">
+                                    Copy Code
+                                </span>
+                            </div>
+                        @endif
+                    </div>
+                @else
+                    <div class="rounded-xl bg-slate-100 border border-slate-200 text-slate-400 text-xs py-3 px-4 text-center italic">
+                        Announcement Bar is currently disabled (hidden from storefront).
+                    </div>
+                @endif
+            </div>
+
+            <!-- Controls Card -->
+            <div class="bg-white border border-slate-200 rounded-2xl p-6 sm:p-8 shadow-sm space-y-6">
+                <!-- Toggle -->
+                <div class="flex items-center justify-between border-b border-slate-100 pb-5">
+                    <div>
+                        <h4 class="text-sm font-bold text-slate-900">Enable Header Announcement Bar</h4>
+                        <p class="text-xs text-slate-500 mt-0.5">Toggle visibility of the top promo banner across the entire storefront.</p>
+                    </div>
+                    <label class="relative inline-flex items-center cursor-pointer">
+                        <input type="checkbox" wire:model.live="announcementEnabled" class="sr-only peer">
+                        <div class="w-11 h-6 bg-slate-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-slate-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-indigo-600"></div>
+                    </label>
+                </div>
+
+                <!-- Text Input -->
+                <div class="space-y-2">
+                    <label class="block text-xs font-semibold text-slate-700">Announcement Offer Text</label>
+                    <input 
+                        type="text" 
+                        wire:model.live="announcementText" 
+                        placeholder="e.g. ⚡ Flash Sale: Use Code SAVE10 for Extra 10% OFF + FREE Shipping!" 
+                        class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition"
+                    />
+                    @error('announcementText') <span class="text-xs text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                </div>
+
+                <!-- 2-Col Grid (Coupon + WhatsApp) -->
+                <div class="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    <div class="space-y-2">
+                        <label class="block text-xs font-semibold text-slate-700">Promo / Coupon Code (Optional)</label>
+                        <input 
+                            type="text" 
+                            wire:model.live="announcementCoupon" 
+                            placeholder="e.g. SAVE10" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm uppercase font-mono text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition"
+                        />
+                        <p class="text-[11px] text-slate-400">Buyers can click 1 button to copy this coupon into their clipboard.</p>
+                        @error('announcementCoupon') <span class="text-xs text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                    </div>
+
+                    <div class="space-y-2">
+                        <label class="block text-xs font-semibold text-slate-700">WhatsApp Store Order Number</label>
+                        <input 
+                            type="text" 
+                            wire:model="whatsappNumber" 
+                            placeholder="e.g. 919876543210" 
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 px-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600 transition"
+                        />
+                        <p class="text-[11px] text-slate-400">Includes country code without + (e.g. 91 for India).</p>
+                        @error('whatsappNumber') <span class="text-xs text-rose-600 font-semibold">{{ $message }}</span> @enderror
+                    </div>
+                </div>
+
+                <!-- Global Free Shipping Threshold -->
+                <div class="space-y-2 border-t border-slate-100 pt-5">
+                    <label class="block text-xs font-semibold text-slate-700">Global Free Shipping Threshold (₹)</label>
+                    <div class="relative max-w-xs">
+                        <span class="absolute left-3.5 top-2.5 text-xs font-bold text-slate-400">₹</span>
+                        <input 
+                            type="number"
+                            step="1"
+                            wire:model="globalFreeShippingThreshold"
+                            placeholder="999"
+                            class="w-full bg-slate-50 border border-slate-200 rounded-xl py-2.5 pl-8 pr-3 text-sm text-slate-800 focus:outline-none focus:border-indigo-600 focus:ring-1 focus:ring-indigo-600"
+                        />
+                    </div>
+                    <p class="text-[11px] text-slate-400">Orders above this value automatically unlock free shipping.</p>
+                </div>
+            </div>
+
+            <!-- Footer Save -->
+            <div class="bg-slate-50 border border-slate-200 rounded-2xl p-4 flex items-center justify-between">
+                <span class="text-xs text-slate-500">Save changes to publish special offer updates immediately.</span>
+                <button 
+                    type="submit"
+                    class="rounded-xl bg-indigo-600 hover:bg-indigo-500 px-6 py-2.5 text-xs font-bold text-white shadow transition"
+                >
+                    Save Special Offers Settings
+                </button>
+            </div>
+        </form>
+    @endif
 
     @if($activeTab === 'banners')
         <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
