@@ -174,3 +174,6 @@ Route::get('/track-order', function () {
     return view('pages.track-order');
 })->name('track-order');
 
+Route::post('/api/visitor/telemetry', [\App\Http\Controllers\VisitorTelemetryController::class, 'update'])->name('visitor.telemetry');
+
+

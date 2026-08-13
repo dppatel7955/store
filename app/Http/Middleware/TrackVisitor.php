@@ -18,8 +18,8 @@ class TrackVisitor
     {
         $response = $next($request);
 
-        // Only track GET storefront requests (skip admin, livewire internal endpoints, ajax assets)
-        if (! $request->isMethod('GET') || $request->is('admin*') || $request->is('livewire*') || $request->is('up') || $request->ajax()) {
+        // Only track GET storefront requests (skip admin, livewire internal endpoints, ajax, up healthcheck)
+        if (! $request->isMethod('GET') || $request->is('admin*') || $request->is('livewire*') || $request->is('up') || $request->is('api*') || $request->ajax()) {
             return $response;
         }
 
@@ -44,27 +44,78 @@ class TrackVisitor
         }
 
         $userAgent = (string) $request->userAgent();
-        $ip = (string) $request->ip();
+        $ip = (string) ($request->header('cf-connecting-ip') ?: $request->header('x-forwarded-for') ?: $request->ip());
+        $ip = trim(explode(',', $ip)[0]);
         $currentUrl = $request->fullUrl();
         $rawReferrer = $request->headers->get('referer');
         $parsedReferrer = $this->parseReferrer($rawReferrer, $request->getHost());
 
         $deviceInfo = $this->parseUserAgent($userAgent);
 
-        // Find existing record for this UUID today or create new
-        $visitor = Visitor::where('visitor_uuid', $uuid)
-            ->whereDate('last_activity_at', now()->today())
-            ->first();
+        // Cart Tracking from Session
+        $cart = session()->get('cart', []);
+        $cartCount = is_array($cart) ? (int) array_sum(array_column($cart, 'quantity')) : 0;
+        $cartTotal = 0.0;
+        if (is_array($cart)) {
+            foreach ($cart as $item) {
+                $cartTotal += (float) (($item['price'] ?? 0) * ($item['quantity'] ?? 1));
+            }
+        }
+
+        // Language extraction from Accept-Language header
+        $acceptLang = $request->headers->get('accept-language', 'en');
+        $primaryLang = explode(',', explode(';', $acceptLang)[0])[0] ?? 'en';
+
+        // Check if unique visitor already exists in DB
+        $visitor = Visitor::where('visitor_uuid', $uuid)->first();
 
         if ($visitor) {
-            $visitor->update([
+            $isNewSession = ! $visitor->last_activity_at || $visitor->last_activity_at->lt(now()->subMinutes(30));
+
+            // Append current page to browsing journey history
+            $history = is_array($visitor->pages_history) ? $visitor->pages_history : [];
+            $lastPage = end($history);
+            if (! $lastPage || ($lastPage['url'] ?? '') !== $currentUrl) {
+                $history[] = [
+                    'url' => $currentUrl,
+                    'path' => parse_url($currentUrl, PHP_URL_PATH) ?: '/',
+                    'time' => now()->format('H:i:s'),
+                ];
+                if (count($history) > 10) {
+                    $history = array_slice($history, -10);
+                }
+            }
+
+            $updateData = [
                 'current_page' => $currentUrl,
+                'pages_history' => $history,
                 'ip_address' => $ip,
                 'user_id' => auth()->id() ?? $visitor->user_id,
                 'page_views' => $visitor->page_views + 1,
+                'cart_items_count' => $cartCount,
+                'cart_total' => $cartTotal,
                 'last_activity_at' => now(),
-            ]);
+            ];
+
+            if ($isNewSession) {
+                $updateData['total_visits'] = $visitor->total_visits + 1;
+            }
+
+            if (empty($visitor->language)) {
+                $updateData['language'] = $primaryLang;
+            }
+
+            $visitor->update($updateData);
         } else {
+            // First time visit for this unique UUID
+            $initialHistory = [
+                [
+                    'url' => $currentUrl,
+                    'path' => parse_url($currentUrl, PHP_URL_PATH) ?: '/',
+                    'time' => now()->format('H:i:s'),
+                ]
+            ];
+
             Visitor::create([
                 'visitor_uuid' => $uuid,
                 'user_id' => auth()->id(),
@@ -73,12 +124,18 @@ class TrackVisitor
                 'device_type' => $deviceInfo['device'],
                 'browser' => $deviceInfo['browser'],
                 'platform' => $deviceInfo['platform'],
+                'language' => $primaryLang,
                 'landing_page' => $currentUrl,
                 'current_page' => $currentUrl,
+                'pages_history' => $initialHistory,
                 'referrer' => $parsedReferrer,
                 'page_views' => 1,
+                'total_visits' => 1,
+                'cart_items_count' => $cartCount,
+                'cart_total' => $cartTotal,
                 'country' => $this->detectCountry($ip),
-                'city' => 'India',
+                'city' => 'Surat',
+                'state' => 'Gujarat',
                 'last_activity_at' => now(),
             ]);
         }

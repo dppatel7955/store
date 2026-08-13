@@ -482,5 +482,38 @@
             });
         </script>
     @endif
+
+    <!-- Client Telemetry Beacon (Screen, Timezone, Connection) -->
+    <script>
+        (function() {
+            try {
+                if (!sessionStorage.getItem('_saffron_tel_sent')) {
+                    const screenRes = window.screen.width + 'x' + window.screen.height;
+                    const tz = Intl.DateTimeFormat().resolvedOptions().timeZone || '';
+                    const lang = navigator.language || navigator.userLanguage || '';
+                    const conn = navigator.connection ? navigator.connection.effectiveType : '';
+
+                    const payload = JSON.stringify({
+                        screen: screenRes,
+                        timezone: tz,
+                        language: lang,
+                        connection: conn
+                    });
+
+                    if (navigator.sendBeacon) {
+                        navigator.sendBeacon('{{ route("visitor.telemetry") }}', new Blob([payload], { type: 'application/json' }));
+                    } else {
+                        fetch('{{ route("visitor.telemetry") }}', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: payload,
+                            keepalive: true
+                        }).catch(() => {});
+                    }
+                    sessionStorage.setItem('_saffron_tel_sent', '1');
+                }
+            } catch (e) {}
+        })();
+    </script>
 </body>
 </html>
